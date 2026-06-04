@@ -332,8 +332,7 @@ window.iniciarQuiz = async m => {
     const nombre = m==="todas"?"Simulacro completo":MATS[m].n;
     const tag = $("qh-mat"); if(tag) { tag.textContent=nombre; tag.style.background=color; }
 
-    // Cronómetros
-    const tw = $("timers-wrap"); if(tw) tw.style.display = tVisible?"flex":"none";
+    // Cronómetros — se configuran en iniciarTimer
     const tb = $("timer-quiz-btn"); if(tb) tb.textContent = tVisible?"👁 Ocultar":"👁 Mostrar";
 
     // Sidebar
@@ -403,7 +402,7 @@ function renderPregunta() {
   // Imagen — tamaño controlado
   const qi = $("q-img");
   if(qi) qi.innerHTML = "<img src=\""+imgSrc(id)+"\" alt=\"Pregunta "+id+"\" loading=\"lazy\""+
-    " style=\"max-width:100%;max-height:360px;width:auto;display:block;margin:0 auto;border-radius:8px;\""+
+    " style=\"max-width:100%;max-height:460px;width:auto;display:block;margin:0 auto;border-radius:8px;\""+
     " onload=\"this.style.opacity=1\" onerror=\"this.parentElement.innerHTML=\'<div style=padding:20px;color:#94a3b8>⚠️ Imagen no disponible</div>\'\" />";
 
   // Limpiar explicación
@@ -506,35 +505,67 @@ window.terminarSimulacro = () => {
 };
 
 // ── TIMER
+function mostrarBloques() {
+  // Mostrar bloques según tModo y tVisible
+  const bT  = $("bloque-temp");
+  const bC  = $("bloque-crono");
+  const bTo = $("bloque-total");
+  const tw  = $("timers-wrap");
+  if(!tw) return;
+  if(!tVisible) {
+    tw.style.display = "none"; return;
+  }
+  tw.style.display = "flex";
+  if(bT)  bT.style.display  = tModo==="temporizador" ? "flex" : "none";
+  if(bC)  bC.style.display  = tModo==="normal"       ? "flex" : "none";
+  if(bTo) bTo.style.display = "flex";
+}
+
 function iniciarTimer() {
   pararTimer();
+  mostrarBloques();
   tInt = setInterval(() => {
     tTotal++; tPreg++;
     if(!tVisible) return;
-    const el = $("t-preg"), et = $("t-total");
-    if(!el) return;
+    const et = $("t-total");
+    if(et) et.textContent = fmt(tTotal);
+
     if(tModo==="temporizador") {
+      const el = $("t-preg"); if(!el) return;
       const r = tValor - tPreg;
       if(r >= 0) {
-        el.textContent = "⏱ "+fmt(r);
+        el.textContent = fmt(r);
         el.className = "t-preg"+(r<=10?" urgente":"");
       } else {
-        el.innerHTML = "⏱ <span style=\"font-size:.8em;color:#dc2626\">"+fmt(r)+"</span>";
-        el.className = "t-preg";
+        el.textContent = fmt(r);   // negativo, css lo pone rojo
+        el.className = "t-preg urgente";
       }
     } else {
-      el.textContent = "⏱ "+fmt(tPreg);
-      el.className = "t-preg";
+      const el = $("t-crono"); if(!el) return;
+      el.textContent = fmt(tPreg);
     }
-    if(et) et.textContent = "Total: "+fmt(tTotal);
   }, 1000);
 }
 function pararTimer() { clearInterval(tInt); }
 
+// Ajustar temporizador en caliente desde el quiz
+window.ajustarTimer = delta => {
+  tValor = Math.max(5, tValor + delta);
+  // Actualizar display inmediato
+  const el = $("t-preg");
+  if(el) { const r=tValor-tPreg; el.textContent=fmt(r); el.className="t-preg"+(r<=10?" urgente":""); }
+};
+window.resetTimerPreg = () => {
+  tPreg = 0;
+  const el = $("t-preg");
+  if(el) { el.textContent=fmt(tValor); el.className="t-preg"; }
+};
+
 window.toggleTimerQuiz = () => {
   tVisible = !tVisible;
-  const tw = $("timers-wrap"); if(tw) tw.style.display = tVisible?"flex":"none";
-  const tb = $("timer-quiz-btn"); if(tb) tb.textContent = tVisible?"👁 Ocultar":"👁 Mostrar";
+  mostrarBloques();
+  const tb = $("timer-quiz-btn");
+  if(tb) tb.textContent = tVisible ? "👁 Ocultar" : "👁 Mostrar";
 };
 
 // ── RESULTADOS
