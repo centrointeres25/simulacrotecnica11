@@ -1,162 +1,205 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Simulacro Saber 11 – IE Modelia Ibagué</title>
-  <link rel="stylesheet" href="style.css"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Simulacro Saber 11 · 2025</title>
+<link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════
-     PANTALLA 1: LOGIN
-══════════════════════════════════════════ -->
-<div id="screen-login" class="screen active">
+<div id="spinner"><div class="spin"></div></div>
+
+<!-- ══ LOGIN ══ -->
+<div id="p-login" class="pantalla">
   <div class="login-card">
-    <div class="logo-wrap">
-      <div class="logo-icon">S11</div>
-      <h1>Simulacro Saber 11</h1>
-      <p class="subtitle">IE Modelia Ibagué</p>
-    </div>
-    <button id="btn-google" class="btn-google">
-      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.33 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.67 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
-      Ingresar con Google
+    <div class="login-logo">🎓</div>
+    <h1>Simulacro Saber 11</h1>
+    <p class="sub">Calendario A · 2025 · Primera Sesión<br>120 preguntas con explicaciones</p>
+    <button class="btn-google" onclick="loginGoogle()">
+      <svg width="22" height="22" viewBox="0 0 48 48">
+        <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 12.9 3 4 11.9 4 23s8.9 20 20 20 20-8.9 20-20c0-1.3-.2-2.7-.5-4z"/>
+        <path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 16 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3c-7.6 0-14.1 4.4-17.7 10.7z"/>
+        <path fill="#FBBC05" d="M24 43c5.6 0 10.6-1.9 14.5-5.1l-6.7-5.5C29.8 33.9 27 35 24 35c-5.7 0-10.6-3.9-12.3-9.2l-7 5.4C8.2 38.8 15.5 43 24 43z"/>
+        <path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.8 2.5-2.4 4.6-4.5 6l6.7 5.5C41.5 36.5 44 30.3 44 23c0-1-.1-2-.5-3z"/>
+      </svg>
+      Continuar con Google
     </button>
-    <p class="login-note">Solo estudiantes con correo institucional</p>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     PANTALLA 2: SELECCIÓN DE MODO
-══════════════════════════════════════════ -->
-<div id="screen-menu" class="screen">
-  <header class="top-bar">
-    <div class="user-info">
-      <img id="user-avatar" src="" alt="avatar" />
-      <span id="user-name"></span>
+<!-- ══ HOME ══ -->
+<div id="p-home" class="pantalla">
+  <nav>
+    <span class="nav-logo">🎓 Saber 11 · 2025</span>
+    <div class="nav-r">
+      <img id="foto-u" src="" alt="" onerror="this.style.display='none'"/>
+      <span id="nombre-u"></span>
+      <button class="btn-icon admin" onclick="irAdmin()">⚙ Admin</button>
+      <button class="btn-icon" onclick="cerrarSesion()">Salir</button>
     </div>
-    <button class="btn-logout" id="btn-logout">Salir</button>
-  </header>
+  </nav>
+  <div class="contenido">
+    <div class="bienvenida">
+      <h2 id="saludo">¡Hola!</h2>
+      <p>Selecciona una materia o practica el simulacro completo.</p>
+    </div>
 
-  <div class="menu-content">
-    <h2>¿Qué quieres practicar hoy?</h2>
+    <div class="modo-sel">
+      <button class="modo-btn activo" id="bm-practica" onclick="setModo('practica')">⚡ Práctica — respuesta inmediata</button>
+      <button class="modo-btn" id="bm-simulacro" onclick="setModo('simulacro')">📝 Simulacro — ver al final</button>
+    </div>
 
-    <div class="mode-cards">
-      <div class="mode-card" id="card-simulacro">
-        <div class="mode-icon">📝</div>
-        <h3>Simulacro completo</h3>
-        <p>Responde todas las preguntas. Las respuestas aparecen al final con tu calificación.</p>
-        <span class="badge badge-blue">120 preguntas</span>
+    <div class="timer-opt">
+      <label class="sw"><input type="checkbox" id="timer-on" checked/><span class="sw-sl"></span></label>
+      <span>Mostrar cronómetro durante el examen</span>
+    </div>
+
+    <div class="grid-materias" id="grid-materias"></div>
+    <button class="btn-todo" onclick="iniciarQuiz('todas')">⚡ Simulacro completo — 120 preguntas</button>
+
+    <div class="stats-box">
+      <h3>📊 Tu resumen general</h3>
+      <div class="stats-grid">
+        <div class="si"><div class="v" id="st-tot">—</div><div class="l">Respondidas</div></div>
+        <div class="si"><div class="v" id="st-cor">—</div><div class="l">Correctas</div></div>
+        <div class="si"><div class="v" id="st-pct">—</div><div class="l">% Acierto</div></div>
+        <div class="si"><div class="v" id="st-tim">—</div><div class="l">Tiempo total</div></div>
       </div>
-      <div class="mode-card" id="card-practica">
-        <div class="mode-icon">⚡</div>
-        <h3>Práctica instantánea</h3>
-        <p>Ve la respuesta correcta inmediatamente después de cada pregunta.</p>
-        <span class="badge badge-green">Retroalimentación inmediata</span>
-      </div>
-    </div>
-
-    <div class="subject-section">
-      <h3>Selecciona materia(s)</h3>
-      <div class="subject-grid" id="subject-grid">
-        <label class="subject-chip selected" data-range="1-25">
-          <input type="checkbox" value="matematicas" checked/>
-          🔢 Matemáticas <span class="chip-range">1–25</span>
-        </label>
-        <label class="subject-chip selected" data-range="26-66">
-          <input type="checkbox" value="lectura" checked/>
-          📖 Lectura Crítica <span class="chip-range">26–66</span>
-        </label>
-        <label class="subject-chip selected" data-range="67-91">
-          <input type="checkbox" value="sociales" checked/>
-          🌎 Sociales y Ciudadanas <span class="chip-range">67–91</span>
-        </label>
-        <label class="subject-chip selected" data-range="92-120">
-          <input type="checkbox" value="ciencias" checked/>
-          🔬 Ciencias Naturales <span class="chip-range">92–120</span>
-        </label>
-      </div>
-      <button class="btn-all-subjects" id="btn-select-all">Seleccionar todas</button>
-    </div>
-
-    <button class="btn-start" id="btn-start">Comenzar</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     PANTALLA 3: EXAMEN
-══════════════════════════════════════════ -->
-<div id="screen-exam" class="screen">
-  <header class="exam-header">
-    <div class="exam-info">
-      <span id="exam-subject-label" class="subject-tag"></span>
-      <span id="exam-progress-text" class="progress-text"></span>
-    </div>
-    <div class="exam-header-right">
-      <div id="exam-timer" class="timer"></div>
-      <button class="btn-exit-exam" id="btn-exit-exam">✕ Salir</button>
-    </div>
-  </header>
-
-  <div class="progress-bar-wrap">
-    <div class="progress-bar-fill" id="progress-bar-fill"></div>
-  </div>
-
-  <div class="question-container">
-    <div class="question-number" id="question-number"></div>
-    <div class="question-image-wrap">
-      <img id="question-img" src="" alt="Pregunta" />
-      <div class="img-loading" id="img-loading">Cargando...</div>
-    </div>
-
-    <div class="options-grid" id="options-grid">
-      <button class="option-btn" data-val="A">A</button>
-      <button class="option-btn" data-val="B">B</button>
-      <button class="option-btn" data-val="C">C</button>
-      <button class="option-btn" data-val="D">D</button>
-    </div>
-
-    <!-- Solo en modo práctica -->
-    <div class="feedback-box" id="feedback-box" style="display:none"></div>
-
-    <div class="nav-buttons">
-      <button class="btn-nav" id="btn-prev">← Anterior</button>
-      <button class="btn-nav btn-next" id="btn-next">Siguiente →</button>
-    </div>
-
-    <!-- Solo en modo simulacro -->
-    <button class="btn-finish" id="btn-finish" style="display:none">Terminar y ver resultados</button>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     PANTALLA 4: RESULTADOS
-══════════════════════════════════════════ -->
-<div id="screen-results" class="screen">
-  <div class="results-content">
-    <div class="results-header">
-      <div class="results-score-circle" id="results-circle">
-        <span id="results-pct">0%</span>
-      </div>
-      <h2 id="results-title">Resultados</h2>
-      <p id="results-summary"></p>
-    </div>
-
-    <div class="results-by-subject" id="results-by-subject"></div>
-
-    <div class="review-section">
-      <h3>Revisión de respuestas</h3>
-      <div id="review-list"></div>
-    </div>
-
-    <div class="results-actions">
-      <button class="btn-start" id="btn-retry">Intentar de nuevo</button>
-      <button class="btn-nav" id="btn-back-menu">← Volver al menú</button>
     </div>
   </div>
 </div>
 
-<!-- Firebase SDKs -->
+<!-- ══ QUIZ ══ -->
+<div id="p-quiz" class="pantalla">
+  <nav>
+    <span class="nav-logo">🎓 Simulacro Saber 11</span>
+    <div class="nav-r">
+      <button class="btn-icon" onclick="salirQuiz()">← Inicio</button>
+    </div>
+  </nav>
+  <div class="quiz-layout">
+
+    <!-- Sidebar navegación -->
+    <div class="quiz-sidebar" id="quiz-sidebar">
+      <div class="sb-title">Navegación</div>
+      <div id="sb-content"></div>
+    </div>
+
+    <!-- Zona principal -->
+    <div class="quiz-main">
+      <div class="quiz-header">
+        <span class="mat-tag" id="qh-mat">Matemáticas</span>
+        <div class="pq">
+          <div class="pt" id="qh-prog">Pregunta 1 de 25</div>
+          <div class="pb"><div class="pf" id="qh-barra" style="width:0%"></div></div>
+        </div>
+        <div class="timers" id="timers-wrap">
+          <div class="t-preg" id="t-preg">⏱ 1:00</div>
+          <div class="t-total" id="t-total">Total: 0:00</div>
+        </div>
+      </div>
+
+      <div class="card-preg">
+        <div class="num-preg" id="q-num">Pregunta 1</div>
+        <div id="q-img"></div>
+        <div id="q-ops"></div>
+        <div class="expl" id="q-expl"></div>
+      </div>
+
+      <div class="quiz-nav-btns">
+        <button class="bn ant" id="btn-ant" onclick="anteriorPregunta()">← Anterior</button>
+        <button class="bn sig" id="btn-sig" onclick="siguientePregunta()">Siguiente →</button>
+        <button class="bn ter" id="btn-ter" onclick="terminarSimulacro()" style="display:none">✅ Terminar y ver resultados</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RESULTADOS ══ -->
+<div id="p-resultados" class="pantalla">
+  <nav>
+    <span class="nav-logo">🎓 Saber 11 · 2025</span>
+    <div class="nav-r">
+      <button class="btn-icon" onclick="mostrarHome()">← Inicio</button>
+    </div>
+  </nav>
+  <div class="contenido">
+    <div class="res-hdr">
+      <div class="em" id="res-em">🎉</div>
+      <h2 id="res-tit">¡Simulacro completado!</h2>
+      <p id="res-sub"></p>
+    </div>
+    <div class="rg">
+      <div class="rc verde"><div class="v" id="res-cor">0</div><div class="l">✅ Correctas</div></div>
+      <div class="rc rojo"><div class="v" id="res-inc">0</div><div class="l">❌ Incorrectas</div></div>
+      <div class="rc azul"><div class="v" id="res-pct">0%</div><div class="l">📈 Acierto</div></div>
+      <div class="rc gris"><div class="v" id="res-tim">0:00</div><div class="l">⏱ Tiempo</div></div>
+    </div>
+    <div class="por-mat" id="por-mat"></div>
+
+    <!-- Hoja de respuestas tipo ICFES -->
+    <div class="hoja-wrap">
+      <h3>📋 Hoja de respuestas</h3>
+      <div class="hoja-sub">
+        🟢 Verde = correcto &nbsp; 🔴 Rojo = incorrecto (tu elección en rojo, correcta en verde) &nbsp; 🟡 Amarillo = sin responder
+      </div>
+      <div class="hoja-grid" id="hoja-grid"></div>
+    </div>
+
+    <!-- Detalle con explicaciones -->
+    <div class="det-sec">
+      <h3>📖 Revisión detallada con explicaciones</h3>
+      <div id="det-list"></div>
+    </div>
+
+    <div class="btns-res">
+      <button class="br pri" id="btn-reintentar">🔄 Reintentar</button>
+      <button class="br sec" onclick="resetMiProgreso()">🗑 Borrar mi progreso</button>
+      <button class="br sec" onclick="mostrarHome()">🏠 Inicio</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN ══ -->
+<div id="p-admin" class="pantalla">
+  <nav>
+    <span class="nav-logo">⚙ Panel de Administración</span>
+    <div class="nav-r">
+      <button class="btn-icon" onclick="mostrarHome()">← Volver</button>
+    </div>
+  </nav>
+  <div class="contenido">
+    <h2>📊 Panel de Administración</h2>
+
+    <div class="adm-stats" id="adm-stats">
+      <div class="adm-s"><div class="v" id="adm-total">—</div><div class="l">Estudiantes</div></div>
+      <div class="adm-s"><div class="v" id="adm-activos">—</div><div class="l">Con actividad</div></div>
+      <div class="adm-s"><div class="v" id="adm-promedio">—</div><div class="l">% Promedio</div></div>
+      <div class="adm-s"><div class="v" id="adm-completos">—</div><div class="l">Completaron todo</div></div>
+    </div>
+
+    <div class="adm-table">
+      <h3>👥 Lista de estudiantes</h3>
+      <div class="adm-search">
+        <input type="text" id="adm-buscar" placeholder="Buscar por nombre o correo..." oninput="filtrarEstudiantes()"/>
+        <button class="ba neutral" onclick="cargarAdmin()">🔄 Actualizar</button>
+      </div>
+      <div id="adm-tabla-wrap"><table>
+        <thead><tr>
+          <th>Estudiante</th><th>Último acceso</th><th>Progreso</th><th>% General</th><th>Tiempo</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="adm-tbody"></tbody>
+      </table></div>
+    </div>
+
+    <div class="adm-actions">
+      <button class="ba danger" onclick="resetTodosAdmin()">🗑 Resetear TODO el progreso de todos</button>
+      <button class="ba neutral" onclick="exportarCSV()">📥 Exportar CSV</button>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="app.js"></script>
 </body>
 </html>
