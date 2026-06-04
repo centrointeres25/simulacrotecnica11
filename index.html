@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulacro Saber 11 – IE Modelia Ibagué</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA 1: LOGIN
+══════════════════════════════════════════ -->
+<div id="screen-login" class="screen active">
+  <div class="login-card">
+    <div class="logo-wrap">
+      <div class="logo-icon">S11</div>
+      <h1>Simulacro Saber 11</h1>
+      <p class="subtitle">IE Modelia Ibagué</p>
+    </div>
+    <button id="btn-google" class="btn-google">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.33 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.67 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+      Ingresar con Google
+    </button>
+    <p class="login-note">Solo estudiantes con correo institucional</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA 2: SELECCIÓN DE MODO
+══════════════════════════════════════════ -->
+<div id="screen-menu" class="screen">
+  <header class="top-bar">
+    <div class="user-info">
+      <img id="user-avatar" src="" alt="avatar" />
+      <span id="user-name"></span>
+    </div>
+    <button class="btn-logout" id="btn-logout">Salir</button>
+  </header>
+
+  <div class="menu-content">
+    <h2>¿Qué quieres practicar hoy?</h2>
+
+    <div class="mode-cards">
+      <div class="mode-card" id="card-simulacro">
+        <div class="mode-icon">📝</div>
+        <h3>Simulacro completo</h3>
+        <p>Responde todas las preguntas. Las respuestas aparecen al final con tu calificación.</p>
+        <span class="badge badge-blue">120 preguntas</span>
+      </div>
+      <div class="mode-card" id="card-practica">
+        <div class="mode-icon">⚡</div>
+        <h3>Práctica instantánea</h3>
+        <p>Ve la respuesta correcta inmediatamente después de cada pregunta.</p>
+        <span class="badge badge-green">Retroalimentación inmediata</span>
+      </div>
+    </div>
+
+    <div class="subject-section">
+      <h3>Selecciona materia(s)</h3>
+      <div class="subject-grid" id="subject-grid">
+        <label class="subject-chip selected" data-range="1-25">
+          <input type="checkbox" value="matematicas" checked/>
+          🔢 Matemáticas <span class="chip-range">1–25</span>
+        </label>
+        <label class="subject-chip selected" data-range="26-66">
+          <input type="checkbox" value="lectura" checked/>
+          📖 Lectura Crítica <span class="chip-range">26–66</span>
+        </label>
+        <label class="subject-chip selected" data-range="67-91">
+          <input type="checkbox" value="sociales" checked/>
+          🌎 Sociales y Ciudadanas <span class="chip-range">67–91</span>
+        </label>
+        <label class="subject-chip selected" data-range="92-120">
+          <input type="checkbox" value="ciencias" checked/>
+          🔬 Ciencias Naturales <span class="chip-range">92–120</span>
+        </label>
+      </div>
+      <button class="btn-all-subjects" id="btn-select-all">Seleccionar todas</button>
+    </div>
+
+    <button class="btn-start" id="btn-start">Comenzar</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA 3: EXAMEN
+══════════════════════════════════════════ -->
+<div id="screen-exam" class="screen">
+  <header class="exam-header">
+    <div class="exam-info">
+      <span id="exam-subject-label" class="subject-tag"></span>
+      <span id="exam-progress-text" class="progress-text"></span>
+    </div>
+    <div class="exam-header-right">
+      <div id="exam-timer" class="timer"></div>
+      <button class="btn-exit-exam" id="btn-exit-exam">✕ Salir</button>
+    </div>
+  </header>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progress-bar-fill"></div>
+  </div>
+
+  <div class="question-container">
+    <div class="question-number" id="question-number"></div>
+    <div class="question-image-wrap">
+      <img id="question-img" src="" alt="Pregunta" />
+      <div class="img-loading" id="img-loading">Cargando...</div>
+    </div>
+
+    <div class="options-grid" id="options-grid">
+      <button class="option-btn" data-val="A">A</button>
+      <button class="option-btn" data-val="B">B</button>
+      <button class="option-btn" data-val="C">C</button>
+      <button class="option-btn" data-val="D">D</button>
+    </div>
+
+    <!-- Solo en modo práctica -->
+    <div class="feedback-box" id="feedback-box" style="display:none"></div>
+
+    <div class="nav-buttons">
+      <button class="btn-nav" id="btn-prev">← Anterior</button>
+      <button class="btn-nav btn-next" id="btn-next">Siguiente →</button>
+    </div>
+
+    <!-- Solo en modo simulacro -->
+    <button class="btn-finish" id="btn-finish" style="display:none">Terminar y ver resultados</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PANTALLA 4: RESULTADOS
+══════════════════════════════════════════ -->
+<div id="screen-results" class="screen">
+  <div class="results-content">
+    <div class="results-header">
+      <div class="results-score-circle" id="results-circle">
+        <span id="results-pct">0%</span>
+      </div>
+      <h2 id="results-title">Resultados</h2>
+      <p id="results-summary"></p>
+    </div>
+
+    <div class="results-by-subject" id="results-by-subject"></div>
+
+    <div class="review-section">
+      <h3>Revisión de respuestas</h3>
+      <div id="review-list"></div>
+    </div>
+
+    <div class="results-actions">
+      <button class="btn-start" id="btn-retry">Intentar de nuevo</button>
+      <button class="btn-nav" id="btn-back-menu">← Volver al menú</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module" src="app.js"></script>
+</body>
+</html>
