@@ -1,816 +1,329 @@
-// ══════════════════════════════════════════
-//  SABER 11 SIMULACRO — app.js
-//  Firebase 10 + Auth Google + Firestore
-//  Características: progreso persistente,
-//  sidebar de navegación, cronómetros,
-//  panel admin, hoja de respuestas tipo ICFES
-// ══════════════════════════════════════════
+:root{
+  --azul:#2563eb;--azul-dk:#1d4ed8;--morado:#7c3aed;
+  --verde:#059669;--rojo:#dc2626;--naranja:#ea580c;
+  --gris:#f1f5f9;--oscuro:#1e293b;--texto:#334155;--borde:#e2e8f0;
+  --sombra:0 4px 20px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,sans-serif;}
+body{background:#e2e8f0;min-height:100vh;color:var(--texto);}
+.pantalla{display:none;min-height:100vh;}
+.pantalla.activa{display:flex;flex-direction:column;}
 
-import { initializeApp }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, deleteDoc,
-         collection, getDocs, serverTimestamp, query, orderBy, limit }
-  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+/* LOGIN */
+#p-login{align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#2563eb 100%);}
+.login-card{background:#fff;border-radius:24px;padding:48px 40px;
+  max-width:420px;width:90%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.3);}
+.login-logo{font-size:3.2rem;margin-bottom:6px;}
+.login-card h1{font-size:1.8rem;color:var(--oscuro);margin-bottom:6px;}
+.login-card .sub{color:#64748b;font-size:.93rem;margin-bottom:28px;line-height:1.5;}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:12px;
+  background:#fff;border:2px solid var(--borde);border-radius:12px;
+  padding:14px 24px;font-size:1rem;font-weight:600;cursor:pointer;
+  width:100%;transition:all .2s;color:var(--oscuro);}
+.btn-google:hover{border-color:var(--azul);box-shadow:0 4px 16px rgba(37,99,235,.2);}
 
-// ── CONFIG ─────────────────────────────────────────────────────────────────
-const FIREBASE = {
-  apiKey:            "AIzaSyBP5uJiq8oteVr9aRog5CVJEEPhDEKmEi0",
-  authDomain:        "saber11-simulacro.firebaseapp.com",
-  projectId:         "saber11-simulacro",
-  storageBucket:     "saber11-simulacro.firebasestorage.app",
-  messagingSenderId: "200980492866",
-  appId:             "1:200980492866:web:2c643ac5116cbfd967f3db"
-};
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "admin";
+/* NAV */
+nav{background:#fff;padding:10px 18px;display:flex;align-items:center;
+  justify-content:space-between;box-shadow:0 1px 8px rgba(0,0,0,.08);
+  position:sticky;top:0;z-index:200;gap:10px;flex-wrap:wrap;}
+.nav-logo{font-weight:800;font-size:.97rem;color:var(--azul);white-space:nowrap;}
+.nav-r{display:flex;align-items:center;gap:8px;}
+.nav-r img{width:30px;height:30px;border-radius:50%;border:2px solid var(--azul);object-fit:cover;}
+.nav-r span{font-size:.82rem;font-weight:600;}
+.btn-icon{background:none;border:1.5px solid var(--borde);border-radius:8px;
+  padding:5px 11px;cursor:pointer;font-size:.8rem;color:#64748b;transition:all .2s;}
+.btn-icon:hover{border-color:var(--rojo);color:var(--rojo);}
+.btn-icon.admin{border-color:var(--morado);color:var(--morado);}
+.btn-icon.admin:hover{background:var(--morado);color:#fff;}
 
-const fbApp    = initializeApp(FIREBASE);
-const auth     = getAuth(fbApp);
-const db       = getFirestore(fbApp);
-const provider = new GoogleAuthProvider();
+/* HOME */
+#p-home .contenido{padding:26px 18px 48px;max-width:940px;margin:0 auto;width:100%;}
+.bienvenida{margin-bottom:20px;}
+.bienvenida h2{font-size:1.5rem;color:var(--oscuro);}
+.bienvenida p{color:#64748b;margin-top:3px;font-size:.93rem;}
+.modo-sel{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.modo-btn{flex:1;min-width:175px;padding:11px 14px;border-radius:11px;
+  border:2px solid var(--borde);background:#fff;cursor:pointer;
+  font-size:.9rem;font-weight:600;transition:all .2s;text-align:center;color:var(--oscuro);}
+.modo-btn.activo{border-color:var(--azul);background:#eff6ff;color:var(--azul);}
+.timer-opt{display:flex;align-items:center;gap:10px;margin-bottom:16px;
+  font-size:.85rem;color:#64748b;}
+.sw{position:relative;width:38px;height:20px;}
+.sw input{opacity:0;width:0;height:0;}
+.sw-sl{position:absolute;inset:0;background:#cbd5e1;border-radius:20px;cursor:pointer;transition:.3s;}
+.sw-sl::before{content:'';position:absolute;width:14px;height:14px;border-radius:50%;
+  background:#fff;left:3px;top:3px;transition:.3s;}
+.sw input:checked+.sw-sl{background:var(--azul);}
+.sw input:checked+.sw-sl::before{transform:translateX(18px);}
 
-// ── MATERIAS ────────────────────────────────────────────────────────────────
-const MATS = {
-  matematicas:{ n:"Matemáticas",          c:"#2563eb", e:"🔢", r:[1,25]   },
-  lectura:    { n:"Lectura Crítica",       c:"#7c3aed", e:"📖", r:[26,66]  },
-  sociales:   { n:"Sociales y Ciudadanas", c:"#059669", e:"🌎", r:[67,91]  },
-  naturales:  { n:"Ciencias Naturales",    c:"#dc2626", e:"🔬", r:[92,120] }
-};
+.grid-materias{display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;margin-bottom:16px;}
+.card-mat{background:#fff;border-radius:15px;padding:20px 16px;box-shadow:var(--sombra);
+  cursor:pointer;transition:all .2s;border:3px solid transparent;}
+.card-mat:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.13);}
+.card-mat .em{font-size:2rem;margin-bottom:8px;}
+.card-mat h3{font-size:.95rem;font-weight:700;margin-bottom:2px;}
+.card-mat .nm{font-size:.78rem;color:#64748b;}
+.card-mat .pb{margin-top:9px;height:5px;background:#e2e8f0;border-radius:99px;overflow:hidden;}
+.card-mat .pf{height:100%;border-radius:99px;transition:width .5s;}
+.card-mat .pt{font-size:.72rem;color:#64748b;margin-top:2px;}
 
-// ── RESPUESTAS Y EXPLICACIONES ──────────────────────────────────────────────
-const QA = {
-  1:{r:"C",e:"Se suman las edades de las siete madres: 21 + 26 + 20 + 21 + 22 + 28 + 30 = 168. Luego se divide entre 7 (número de datos): 168 ÷ 7 = 24. El promedio de las edades es 24 años."},
-  2:{r:"B",e:"La fórmula dada es: Valor total = (5 × $80.000 + 2 × $150.000)(1 + y), donde y es el porcentaje del impuesto. El problema indica que el impuesto puede ser 12% o 19% según la temporada del año. Como el enunciado no especifica cuál es la temporada, no se puede determinar "},
-  3:{r:"C",e:"Al sumar todas las regiones del diagrama de Venn: 10 + 8 + 5 + 6 + 1 + 15 + 15 = 60 pacientes tratados en total. Al sumar las frecuencias de la tabla: 24 + 22 + 14 = 60. Ambos valores coinciden con el número total de pacientes (60), lo que valida la consistencia entre l"},
-  4:{r:"D",e:"Para que haya \'al menos un hombre\' en el grupo, se deben considerar: Grupo 2 (una mujer y dos hombres → Y combinaciones) y Grupo 3 (dos mujeres y un hombre → Z combinaciones). El Grupo 1 (tres hombres) es imposible ya que solo hay 2 hombres, por lo que X = 0 siempre. El"},
-  5:{r:"B",e:"Se multiplica la cantidad de premios por el monto de cada uno: Oro: 5 × $10.000.000 = $50.000.000. Plata: 25 × $5.000.000 = $125.000.000. Bronce: 100 × $1.000.000 = $100.000.000. La tabla B refleja correctamente estos totales."},
-  6:{r:"C",e:"Paso 1: $750.000 ÷ $50.000 = 15. Paso 2: Se busca x tal que 2⁰ + 2¹ + 2² + 2³ = 1 + 2 + 4 + 8 = 15, entonces x = 3. Paso 3: Se suma 1 al valor de x: 3 + 1 = 4 meses. La familia necesita ahorrar durante 4 meses para completar los $750.000."},
-  7:{r:"B",e:"Siguiendo la estrategia de Alberto: el sueldo de Estefanía es $900.000 → 9 × 3 = 27. Luego, 900.000 tiene 5 ceros pero se consideran 3, formando el factor 1.000. Ahorro mensual: 27 × 1.000 = $27.000. En 10 meses: $27.000 × 10 = $270.000."},
-  8:{r:"C",e:"Comparando los valores: en la gráfica, Antioquia en 2012 muestra 20,5 (tabla: 21,7) y en 2013 muestra 18,3 (tabla: 22,4). Además, Bogotá D.C. en 2015 muestra un valor diferente en la gráfica respecto a la tabla (4,7). Estas discrepancias muestran que la información de l"},
-  9:{r:"D",e:"Los datos de la distribución de las 2.000 papas son: [15–20): 700 papas (35%), [20–25): 500 papas (25%), [25–30): 800 papas (40%). La gráfica correcta debe ser un histograma o gráfico de barras con \'Intervalo\' en el eje x y \'Cantidad de papas\' en el eje y, con barras qu"},
-  10:{r:"C",e:"La encuesta llama a 1.000 personas de un solo municipio elegido aleatoriamente dentro del departamento. Como el departamento tiene muchos municipios, la muestra solo representa a ese municipio en particular, no a toda la población departamental. Esta falta de representa"},
-  11:{r:"B",e:"La torta tiene 60 cm de base y 20 cm de altura. Según la figura, el trozo número 1 (ubicado en la parte superior derecha) tiene dimensiones de 15 cm de ancho y 10 cm de alto. Su área es: 15 cm × 10 cm = 150 cm²."},
-  12:{r:"C",e:"Los pedidos están en unidades distintas: Pedido 1 en kg, Pedido 2 en kg, y Pedido 3 en toneladas. Para sumar magnitudes, deben estar en la misma unidad. El empleado sumó 500 + 200 + 1 obteniendo \'701 ton\', lo cual es incorrecto porque mezcló kg con toneladas. Lo correct"},
-  13:{r:"C",e:"La región 1 tiene forma triangular con base 4 m y altura 3 m. El área de un triángulo es (base × altura) ÷ 2 = (4 × 3) ÷ 2 = 6 m². El pintor calculó solo 4 × 3 = 12 m² sin dividir entre 2, lo que duplica el área real. El error está en el paso 2: faltó dividir el resulta"},
-  14:{r:"C",e:"La tabla muestra valores absolutos de votos (2.000, 5.000, etc.). La gráfica circular (pie chart) solo muestra proporciones/porcentajes relativos. Sin conocer el total de votos, es imposible obtener los valores exactos de la tabla a partir de la gráfica. Por lo tanto, l"},
-  15:{r:"B",e:"Observando el dinero ahorrado al finalizar cada mes: Enero: $130.000, Febrero: $160.000, Marzo: $190.000, Abril: $220.000. La diferencia entre meses consecutivos es siempre $30.000 ($160.000 – $130.000 = $30.000, $190.000 – $160.000 = $30.000, etc.). La tendencia es de "},
-  16:{r:"B",e:"El promedio del número de piezas reemplazadas se calcula sumando los valores y dividiendo entre el número de vehículos: (6 + 5 + 10) ÷ 3 = 21 ÷ 3 = 7 piezas promedio."},
-  17:{r:"D",e:"Para conocer el total de personas que se transportan en bicicleta, se deben sumar todas las regiones del diagrama de Venn que incluyen la bicicleta: solo bicicleta (50) + bicicleta y carro (20) + bicicleta y transporte público (25) + los tres medios (5) = 100 personas. "},
-  18:{r:"D",e:"El número se duplica cada 2 años. Partiendo de 10.000 en 2010: 2010: 10.000 → 2012: 20.000 → 2014: 40.000 → 2016: 80.000 transistores. En 6 años (3 duplicaciones), el número es 10.000 × 2³ = 10.000 × 8 = 80.000."},
-  19:{r:"A",e:"El procedimiento calcula el área de un triángulo sombreado (paso 1: base × altura, paso 2: ÷ 2) y luego multiplica por 4 (paso 3) para obtener el área de los 4 triángulos. El paso 4 dice \'sumar 4 veces el resultado del paso 2\', lo cual produce exactamente el mismo resul"},
-  20:{r:"A",e:"La expresión original es: (10 m/s)(15s) + ½(3 m/s²)(15s)². Al factorizar 15s: 15s × [10 m/s + ½(3 m/s²)(15s)] = 15s × [10 + 22,5] m/s = 487,5 m. La persona factorizó correctamente el tiempo (15 s) como factor común de los dos términos, lo cual es una operación algebraic"},
-  21:{r:"B",e:"Para calcular el tiempo de descarga: Tiempo = Tamaño (KB) ÷ Velocidad (KB/s). El tamaño en KB = 12,6 MB × 1.024 KB/MB = 12.902,4 KB. Velocidad = 300 KB/s. Tiempo = 12.902,4 ÷ 300 ≈ 43 s. El procedimiento B calcula primero 1.024 × 300 = 307.200, y luego 307.200 ÷ 12,6 ≈ "},
-  22:{r:"C",e:"La rampa va desde 3 m de altura (en la pared) hasta 0 m a 4 m de distancia. La columna está a 2 m de la pared (y también a 2 m del extremo). Por triángulos semejantes: h/3 = (4–2)/4 → h = 3×(2/4) = 1,5 m. El procedimiento C usa: 4÷2 = 2, luego 3÷2 = 1,5 m, que coincide "},
-  23:{r:"A",e:"En coordenadas polares (r, θ), r es la distancia al polo (torre de control). Comparando las distancias: W = 20 km (más cercano), V = 30 km, Y = 40 km, X = 60 km (más lejano). El orden de más cerca a más lejos es: W, V, Y, X."},
-  24:{r:"C",e:"Siguiendo la ruta de Kevin desde la farmacia: avanza 3 cuadras (primer pedido), avanza el doble = 6 cuadras (segundo pedido), avanza la mitad de las anteriores = 3 cuadras (tercer pedido), regresa 10 cuadras (cuarto pedido), avanza 1 cuadra (llega a casa). La expresión "},
-  25:{r:"C",e:"Se ordenan las presiones de menor a mayor (más negativa a menos negativa): Mariana: –7,62 (la más baja, primera en recibir tratamiento), Santiago: –7,60, Orlando: –7,53, Ximena: –7,09 (la menos negativa, última). La opción C refleja este orden correctamente."},
-  26:{r:"D",e:"El segundo párrafo presenta dos razones de Epicuro: (1) todos los seres vivos, por instinto y desde su nacimiento, buscan el placer y rechazan el dolor; (2) los sentimientos de placer y dolor son criterios esenciales de decisión y conducta, pues son eventos reales que n"},
-  27:{r:"D",e:"El primer enunciado afirma que la filosofía epicúrea tiene una finalidad ética porque pretende guiarnos hacia la buena vida. El segundo enunciado explica qué entiende el epicureísmo por \'buena vida\' (la vida placentera cuyo fin es conseguir placer y evitar dolor). El se"},
-  28:{r:"A",e:"El fragmento señala que el placer y el dolor son \'eventos reales que no pueden ser refutados\' y que son evidentes (no podemos dudar de que sentimos dolor ante un golpe). Al ser reales e inevitables, sirven como criterios de decisión y conducta, lo que apoya la tesis de "},
-  29:{r:"B",e:"El fragmento del texto sostiene que la tendencia natural e instintiva de buscar placer y evitar dolor es el criterio ético más fundamental. La cita de Darwin establece que tanto los humanos como los animales comparten esta capacidad natural de sentir placer y dolor, lo "},
-  30:{r:"C",e:"La pregunta retórica \'¿cómo podría ser falsa la sensación de dolor ante un golpe?\' no busca una respuesta, sino reforzar la afirmación anterior: el dolor es un hecho real que no puede cuestionarse. Su función es afirmar con énfasis que la experiencia del dolor es indisc"},
-  31:{r:"A",e:"El tercer párrafo contrasta la educación sofista (finalidad práctica: aprender a argumentar y persuadir) con los modelos anteriores que buscaban \'alcanzar y descubrir la verdad\'. Al hacer esta distinción, el texto presupone que la búsqueda de la verdad es teórica y no p"},
-  32:{r:"B",e:"La afirmación 1 sostiene un relativismo epistemológico (todo depende del punto de vista). La afirmación 2 es nihilista/escéptica radical (nada existe). El relativismo (1) no implica necesariamente el nihilismo (2): que la verdad dependa de perspectivas culturales no sig"},
-  33:{r:"A",e:"\'Deslumbrar\' significa impresionar fuertemente, causar admiración intensa (como la luz que ciega). \'Encandilar\' tiene el mismo sentido: deslumbrar, fascinar, impresionar de manera que \'cega\' la razón. Es el sinónimo más preciso en este contexto, donde el dinero busca ge"},
-  34:{r:"A",e:"El fragmento abre el texto de \'Ética para Amador\' presentando la idea central que el autor defenderá: no se trata solo de tener una buena vida (como la de una coliflor o un escarabajo), sino de tener una buena vida humana. Este fragmento introductorio establece la tesis"},
-  35:{r:"D",e:"Savater presenta el tema (qué es la buena vida), expone su tesis (la buena vida humana requiere relaciones con otros), y la defiende con ejemplos concretos sobre el dinero, la ropa, la casa, haciendo preguntas retóricas que conducen al lector hacia su conclusión."},
-  36:{r:"B",e:"\'Casi todas las sociedades humanas conocidas han tenido música, lo que sugiere que nuestra apreciación por ella es innata.\' El pronombre relativo \'lo que\' conecta la evidencia (todas las sociedades tienen música) con la conclusión que se infiere de ella (la apreciación "},
-  37:{r:"C",e:"El texto describe la evolución histórica: los antepasados tocaban flautas de hueso y percusiones, luego los instrumentos se diversificaron pasando por madera, cuerda y metal (donde entra la trompeta), hasta llegar a las guitarras eléctricas. La trompeta, siendo de metal"},
-  38:{r:"D",e:"En el texto, los bebés de dos meses voltean cuando escuchan sonidos agradables y le dan la espalda a \'los disonantes\'. En el contexto de la percepción musical infantil, \'disonantes\' son los sonidos que resultan desagradables al oído, en contraposición a los agradables ("},
-  39:{r:"B",e:"El fragmento es la primera oración del texto y establece el tema central: la relación antiquísima (más de 40.000 años) entre los humanos y la música. Su función es presentar el asunto principal que el texto desarrollará."},
-  40:{r:"C",e:"El autor compara la afición por la literatura con la \'solitaria\' (tenia): un parásito que se instala en el organismo, se alimenta de él y lo domina. Esta analogía/comparación entre el escritor y el enfermo de solitaria es la estrategia retórica usada para ilustrar cómo "},
-  41:{r:"B",e:"El texto explica directamente cómo actúa la solitaria: \'Una vez que la solitaria se instala en el organismo se consubstancia con él, se alimenta de él, crece y se fortalece a expensas de él\'. Esta es la descripción precisa del mecanismo de actuación del parásito en el c"},
-  42:{r:"B",e:"José María confiesa que todas sus actividades (cine, exposiciones, librerías) las hace \'para ella, la solitaria\', y que ya no vive para sí mismo sino para ese ser que lleva adentro, \'del que ya no soy más que un sirviente\'. Este fragmento caracteriza cómo la solitaria ("},
-  43:{r:"C",e:"La comparación \'hacen efervescencia como champaña\' significa que las burbujas explotan y liberan su contenido (partículas) hacia el ambiente, de la misma manera que las burbujas de champaña estallan y liberan gas CO₂. La equivalencia está en el proceso de efervescencia "},
-  44:{r:"D",e:"El último cuadro presenta el resultado final del proceso descrito: \'el conjunto de partículas es lo que produce ese olor llamado petricor\'. Este cierre resume el propósito del texto (explicar el origen del olor a lluvia) y concluye el proceso narrado paso a paso, funcio"},
-  45:{r:"C",e:"La \'o\' conecta: \'ese olor llamado petricor\' con \'como lo conoces tú: tierra mojada\'. Ambas expresiones se refieren al mismo fenómeno con nombres diferentes. La \'o\' no indica oposición ni causa-efecto, sino que ofrece una alternativa de denominación (petricor = tierra mo"},
-  46:{r:"D",e:"La infografía del petricor describe el fenómeno mostrando etapas secuenciales: las gotas forman burbujas → las burbujas atrapan partículas → las burbujas hacen efervescencia → las partículas se esparcen → producen el olor. La estrategia es explicar un proceso paso a pas"},
-  47:{r:"B",e:"El texto de Téllez defiende que la infancia representa \'la única certeza de sinceridad\'. Los niños \'aman y detestan integral, honda y sinceramente con diáfana lealtad\', expresan sus emociones con plena claridad sin hipocresía ni disimulo. La tesis central es que en la i"},
-  48:{r:"B",e:"El texto presenta la tesis (los niños son sinceros, los adultos aprenden a mentir) y la defiende acumulando ejemplos concretos de la honestidad infantil: cómo aman y detestan con diáfana lealtad, cómo expresan su amor o desamor sin razones añadidas, cómo sienten la natu"},
-  49:{r:"B",e:"El cómic se basa en la obra \'El árabe del futuro 4\' y menciona explícitamente el Corán (en la nota a pie de página: \'Corán: Libro sagrado para los musulmanes\'). El texto árabe dividido en versículos que la maestra enseña corresponde al Corán, que es un texto religioso e"},
-  50:{r:"C",e:"En el sexto cuadro, el globo contiene las palabras árabes que recita la mujer (\'Bismilá arramán arrahím\'), mientras que el texto en cursiva debajo de la flecha dice \'Escucharla era muy agradable\'. Este texto en cursiva expresa el gusto o la reacción emocional positiva d"},
-  51:{r:"D",e:"Los rectángulos de texto en la parte superior de los cuadros 1, 3, 4 y 6 narran la experiencia desde la perspectiva de la protagonista: \'El director de la escuela y mi padre creían...\', \'Así que me obligaron...\', \'Yo me preguntaba si...\'. Estas narraciones están en prim"},
-  52:{r:"D",e:"La predicción 1 (el Papa Francisco sufrirá una grave enfermedad) es específica y, según el texto, fallida en ese aspecto. La predicción 2 (en el mundo habrá más refugiados) es general y, según el texto, acertó. Estas dos predicciones ilustran funciones opuestas: las esp"},
-  53:{r:"A",e:"El experimento de Forer entregó a todos los estudiantes la misma descripción (que decía tener \'gran necesidad de aprecio\', \'compensar debilidades\', etc.), y todos la valoraron altamente como descripción precisa de sí mismos. Esto evidencia que las personas tienden a cre"},
-  54:{r:"B",e:"El texto dice: \'El tren se detuvo en el interior del bosque\' y las negociaciones ocurrieron en \'un antiguo coche-cama francés\'. El vagón pertenecía al mariscal Foch, comandante supremo de las fuerzas aliadas, y estaba en territorio bajo control aliado. La firma se reali"},
-  55:{r:"B",e:"Los alemanes \'quedaron aturdidos, comprendiendo por primera vez la magnitud de su derrota\'. Habían ido a negociar una tregua sin saber que serían ellos quienes debían pedir condiciones de rendición. Estaban derrotados pero no comprendían plenamente su situación hasta es"},
-  56:{r:"B",e:"El texto presenta a Erzberger como \'portavoz del grupo\' alemán que llegó a recibir las propuestas aliadas para una tregua. Fue enviado a negociar con el mariscal Foch, el \'supremo comandante de las fuerzas aliadas\'. Su rol es el de un representante diplomático alemán en"},
-  57:{r:"C",e:"El texto principal dice que la intransigencia de Foch y el destino de Erzberger son ejemplos de las fuerzas que condujeron a la Segunda Guerra Mundial. El fragmento adicional (Churchill) complementa esto mostrando que el Tratado de Versalles dejó a Alemania prácticament"},
-  58:{r:"D",e:"El primer enunciado afirma que la extinción es un proceso evolutivo natural. La pregunta retórica del segundo enunciado (\'¿Por qué hay que preocuparse si se está ayudando a la naturaleza?\') refuerza esta misma idea. No hay contradicción ni duda: ambos enunciados sostien"},
-  59:{r:"C",e:"La cita de Los Simpson presenta el argumento anti-conservacionista de forma exagerada e irónica (Burns se queja de que \'la naturaleza quiere renunciar porque está perdiendo\'). Esta caricaturización ridiculiza el argumento de que la extinción es natural y aceptable, debi"},
-  60:{r:"C",e:"En el contexto \'diseñar un computador que sea obedientemente útil y, al mismo tiempo, inmune a la infección\', \'inmune\' significa que no puede ser afectado o atacado por infecciones. El sinónimo más preciso es \'invulnerable\', que significa imposible de ser dañado o venci"},
-  61:{r:"C",e:"La comparación con los soldados ilustra que estos obedecen órdenes sin evaluar si son correctas o incorrectas. El autor usa esta analogía para decir que los computadores hacen exactamente lo mismo: ejecutan cualquier instrucción sin ningún juicio sobre sus consecuencias"},
-  62:{r:"C",e:"El enunciado 2 establece el principio general: la obediencia incuestionable hace que los computadores sean útiles PERO vulnerables. El enunciado 1 es un ejemplo concreto de esta vulnerabilidad: un programa malicioso que diga \'cópiame\' será obedecido y se propagará. El e"},
-  63:{r:"B",e:"El texto gira en torno al rasgo central de los computadores (la obediencia ciega a instrucciones) y sus implicaciones: les permite ser útiles y al mismo tiempo los hace vulnerables a infecciones. La pregunta que mejor captura este enfoque del texto es la B."},
-  64:{r:"B",e:"El texto dice que un programa malicioso que diga \'cópiame y envíame a todas las direcciones que puedas encontrar en el disco duro\' será \'simplemente obedecido y vuelto a obedecer por los demás computadores\'. Si su computador es infectado, lo primero que hará es enviar e"},
-  65:{r:"B",e:"El texto explica: \'la pequeñez de las partes constituía un gran obstáculo para la rapidez de mi trabajo, decidí... hacer un ser de estatura gigantesca\'. La razón principal es que trabajar con partes pequeñas era lento y dificultoso; hacer un ser grande simplificaba y ac"},
-  66:{r:"B",e:"La frase \'parecía haber perdido por completo el alma y la sensibilidad salvo para este objetivo\' expresa el estado emocional del narrador durante la creación: estaba completamente obsesionado, sin sensibilidad para nada más. No es una afirmación ni una promesa, sino la "},
-  67:{r:"D",e:"En 1811, Colombia estaba en guerra de independencia: Nariño rechazaba el federalismo porque dividía las fuerzas necesarias para enfrentar a España. En 1823, con la independencia prácticamente ganada, el federalismo se convirtió en el sistema más adecuado para garantizar"},
-  68:{r:"B",e:"La dimensión cultural: la cosmovisión indígena da valor espiritual al jaguar. La dimensión jurisdiccional: ¿puede la autoridad indígena sancionar a alguien que no es miembro de su comunidad? Pedro cuestiona que las normas de un cabildo indígena le sean aplicables a él p"},
-  69:{r:"A",e:"El periodista argumenta que puede publicar sin verificar gracias a la libertad de prensa. La opción A contradice esto al afirmar que la libertad de prensa solo protege la divulgación de información veraz e imparcial. Publicar sin verificar las fuentes no está amparado p"},
-  70:{r:"D",e:"La dimensión económica está presente en: \'generar grandes ingresos, brindar empleo y llevar electricidad\'. La dimensión ambiental aparece en: \'intervenciones en el río Omo\' y \'podría acabar con miles de animales y plantas nativas\'. No se mencionan explícitamente dimensi"},
-  71:{r:"D",e:"El fragmento B describe al presidente hablando \'por segunda vez en 48 horas\', lo que indica una respuesta urgente e inmediata a los atentados. El fragmento A describe acciones como \'aprobando nuevas leyes y reforzando la seguridad\', que son procesos a largo plazo implem"},
-  72:{r:"C",e:"Si se implementa la erradicación manual, la fuerza pública erradicaría los cultivos directamente. Los campesinos obligados por los GAO a cultivar coca se verían afectados por esta medida. Según el texto, no está contemplado judicializarlos, pero la destrucción de sus cu"},
-  73:{r:"C",e:"El clientelismo implica que gobernantes intercambian bienes/servicios o trato privilegiado por apoyo político. Esta práctica justifica la existencia de entes de control porque, sin supervisión, los gobernantes aprovechan su posición para obtener votos mediante favores, "},
-  74:{r:"C",e:"El texto explica que la Corte Constitucional buscó \'responder a los nuevos patrones en la conformación de las familias en el país\'. Las normas jurídicas deben adaptarse a las realidades sociales cambiantes para garantizar los derechos de todos y facilitar la convivencia"},
-  75:{r:"B",e:"La situación describe contaminación del río (única fuente de agua) por la minería. Una regulación permitiría conciliar el derecho a la salud y al agua limpia de los habitantes con el derecho al trabajo de los mineros, estableciendo estándares que protejan ambos interese"},
-  76:{r:"A",e:"El Manifiesto Comunista fue escrito por Marx y Engels en 1848, es decir, en el siglo XIX. El texto mismo menciona \'todas las fuerzas de la vieja Europa\' y el contexto de las potencias europeas, lo que sitúa su escritura en el contexto del capitalismo industrial europeo "},
-  77:{r:"A",e:"La definición de POT establece que los recursos de la comunidad \'se empleen eficientemente y de manera sostenible\' y busca \'el desarrollo más equitativo posible\'. Estos dos conceptos (equitativo y sustentable/sostenible) son los que mejor resumen la finalidad del POT se"},
-  78:{r:"C",e:"Las condiciones necesarias para implementar la energía eólica incluyen: convencer a la población del beneficio, que no les incomode el impacto visual, y que la capacidad de producción sea suficiente. La reforestación es una consecuencia DESEABLE pero no una condición NE"},
-  79:{r:"A",e:"El político recomienda \'tener mucho cuidado al momento de relacionarse en la calle con cualquier persona que parezca tener un acento del país vecino\'. Esto genera una predisposición negativa hacia todos los inmigrantes, independientemente de si son o no delincuentes, pr"},
-  80:{r:"D",e:"Las 5 condiciones propuestas buscan: calendario electoral estable, controles independientes, no represalias por voto, libertad de partidos, y respeto de resultados. Todas estas medidas apuntan a fortalecer la democracia representativa y garantizar que la oposición pueda"},
-  81:{r:"B",e:"Los gremios minero y petrolero quieren explotar la selva amazónica. Los pueblos indígenas aislados voluntariamente buscan protección de su territorio. Estos intereses son directamente opuestos, pues la explotación minera implicaría contacto con los pueblos indígenas, lo"},
-  82:{r:"A",e:"La propuesta del Ministerio de Minas asume que los gremios actuarán dentro del marco legal al negociar. No considera la posibilidad de que su interés sea únicamente la extracción ilegal de recursos. Esta reacción NO fue contemplada en la propuesta."},
-  83:{r:"C",e:"La dimensión económica: los mercados campesinos permiten vender sin intermediarios a mejores precios, mejorando los ingresos. La dimensión cultural: se rescata una tradición ancestral (los mercados campesinos) y prácticas olvidadas relacionadas con el cultivo de la papa"},
-  84:{r:"B",e:"El texto dice que \'el Gobierno nacional le comunica que, si se considera el diseño entregado por los ingenieros, no habrá dinero suficiente para ejecutar la obra\'. El obstáculo principal es económico: el diseño es más costoso de lo que el presupuesto gubernamental puede"},
-  85:{r:"D",e:"Gracias al acuerdo de paz, el rol del ejército cambió: en lugar de combatir al grupo armado, ahora lo custodia durante su transición a la vida civil. Este cambio de función se explica porque el contexto sociopolítico del país es diferente: hay un proceso de paz que requ"},
-  86:{r:"B",e:"Las afirmaciones del presidente sobre el cambio climático en redes sociales no son confiables porque provienen de alguien con intereses económicos. Un presidente escéptico del cambio climático podría tener razones para no apoyar acuerdos ambientales que limiten la produ"},
-  87:{r:"B",e:"La teoría de la dependencia describe que los países del norte (desarrollados) obtienen materias primas baratas de los del sur (en desarrollo), las procesan, y venden productos terminados de mayor valor. La opción B refleja exactamente esta dinámica: la multinacional (no"},
-  88:{r:"C",e:"La ONU define el desarrollo sostenible como el equilibrio entre desarrollo económico, desarrollo social y protección del medio ambiente. Una política económica es sostenible cuando no sacrifica la protección ambiental en favor del crecimiento económico, sino que les da "},
-  89:{r:"D",e:"Según Smith, la división del trabajo hace que cada persona produzca lo que mejor sabe hacer. El mercado permite luego el intercambio de estos bienes especializados, distribuyéndolos eficientemente entre quienes los necesitan. El mercado es el mecanismo de distribución d"},
-  90:{r:"C",e:"El artículo describe al pez león como una amenaza para las especies nativas al alimentarse de peces jóvenes (como el pargo y el mero). Esta información es útil para investigar cómo la presencia del pez león ha reducido la biodiversidad marina en el Caribe colombiano, co"},
-  91:{r:"C",e:"La Constitución Política de Colombia prevé mecanismos de participación ciudadana como el referendo, que permite a los ciudadanos proponer y votar cambios en las leyes. Los jóvenes pueden promover un referendo aprobatorio de iniciativa ciudadana sin necesidad de que sea "},
-  92:{r:"C",e:"Los expertos identifican que el foco de la contaminación son sustancias como el aceite usado en casas, restaurantes e industria, cuyas tuberías de desagüe están conectadas a la fuente de agua. El aceite que se vierte al desagüe llega directamente a la fuente, contaminán"},
-  93:{r:"D",e:"La fotosíntesis produce carbohidratos (glucosa) a partir de CO₂, agua y energía solar: 6CO₂ + 6H₂O + energía → C₆H₁₂O₆ + 6O₂. Los carbohidratos son la fuente de energía y el material de construcción de la planta. Sin fotosíntesis no se producen carbohidratos, por lo que"},
-  94:{r:"D",e:"Los datos muestran que tanto la riqueza (68→62→45→22→12) como la cantidad de individuos (1.563→1.621→803→456→102) disminuyen progresivamente del 2003 al 2023 (con una pequeña subida en individuos en 2008). La opción D muestra dos líneas de tendencia decreciente en el ti"},
-  95:{r:"B",e:"Según el esquema de wifi zonas comunitarias, la información proveniente de internet llega al pueblo exclusivamente a través del cable de fibra óptica hasta la antena principal. Sin esta conexión, la antena principal no tendría señal de internet que redistribuir a las an"},
-  96:{r:"D",e:"La frecuencia es el número de ciclos por unidad de tiempo. Si la frecuencia del Grupo 2 es 5 veces mayor que la del Grupo 1, en el mismo intervalo de tiempo el Grupo 2 debe mostrar 5 veces más ciclos completos. La opción D muestra correctamente que Grupo 1 tiene pocas o"},
-  97:{r:"D",e:"El esquema Megazonas wifi muestra múltiples cabeceras rurales conectadas entre sí a través de antenas principales y secundarias. Mostrar estas conexiones visualmente evidencia que el sistema puede enlazar varias poblaciones simultáneamente con señal estable, lo cual es "},
-  98:{r:"A",e:"Pedro observó que la fruta tardó varios días en descomponerse y planteó que los cambios químicos necesitan varios días. El libro dice que la velocidad de reacciones depende de factores como temperatura, concentración y catalizadores. La hipótesis de Pedro es compatible "},
-  99:{r:"A",e:"El fenómeno descrito es especiación alopátrica: una sola población de monos queda dividida por un río, generando dos grupos que se reproducen de forma aislada durante mucho tiempo hasta convertirse en dos especies distintas. El modelo correcto muestra un círculo inicial"},
-  100:{r:"A",e:"El estudiante aplica una fuerza que aumenta progresivamente mientras recorre los primeros 4 m. Luego ejerce una fuerza constante para los últimos 2 m (de 4 a 6 m). La gráfica correcta muestra una línea ascendente de 0 a 4 m y una línea horizontal (constante) de 4 a 6 m."},
-  101:{r:"B",e:"Mineral 3: Azul, No metálico, Sí — Mineral 6: Azul, No metálico, Sí → idénticos. Mineral 2: Rojo, No metálico, No — Mineral 7: Rojo, No metálico, No → idénticos. La opción B identifica correctamente estos dos pares con características iguales."},
-  102:{r:"C",e:"La mitosis produce células hijas idénticas a la célula madre. En el folículo capilar, las células capilares se dividen por mitosis generando nuevas células que secretan fibras de queratina. Este aumento continuo de células es el que permite el crecimiento del cabello ha"},
-  103:{r:"B",e:"Con el ave: el parásito infecta el hígado y daña los glóbulos rojos → interacción negativa (parasitismo). Con el zancudo: el parásito se reproduce en el intestino del insecto \'sin afectar su funcionamiento\' → interacción neutral (comensalismo o sin daño aparente)."},
-  104:{r:"B",e:"Los isótopos son átomos del mismo elemento (mismo número de protones) con diferente número de neutrones. Ñ tiene 1 protón y 0 neutrones; Y tiene 1 protón y 2 neutrones. Ambos tienen 1 protón (mismo elemento) pero diferente número de neutrones → son isótopos. X y Z tiene"},
-  105:{r:"A",e:"La disolución 2 tiene % p/p = 24%, % p/v = 24% y Molaridad = 4,10 M, mientras que la disolución 1 tiene 12%, 12% y 2,05 M respectivamente. En iguales volúmenes, la disolución 2 tiene mayor concentración (mayor % y mayor molaridad), lo que indica mayor masa de soluto dis"},
-  106:{r:"C",e:"La conclusión de Camila es que los líquidos viscosos disminuyen la velocidad de la esfera. Para validar esto, necesita saber cuál líquido usó en cada medición y cuál es la viscosidad de cada uno. Sin los datos de viscosidad de cada líquido, no puede relacionar velocidad"},
-  107:{r:"C",e:"La tabla indica que la fibra insoluble \'absorbe agua y favorece el paso de los alimentos por el tracto digestivo, y regulariza la función del intestino\'. El estreñimiento se caracteriza por tránsito intestinal lento y dificultad para evacuar. La fibra insoluble acelera "},
-  108:{r:"A",e:"La hipótesis es: a mayor tamaño de papa, mayor tiempo de reacción. Esto es una relación directamente proporcional. La gráfica correcta debe mostrar barras en orden descendente: Grande (barra más alta) > Mediana (barra media) > Pequeña (barra más baja). La opción A repre"},
-  109:{r:"C",e:"El proceso criogénico enfría el caucho a temperaturas muy bajas (–70°C o menos) haciéndolo frágil y fácil de triturar. Si el túnel de enfriamiento falla, el caucho estará a temperatura ambiente y será más elástico y resistente. Para triturarlo sin enfriarlo, se necesita"},
-  110:{r:"A",e:"Al enfriar el caucho hasta –70°C o menos, se vuelve frágil y se rompe con un solo paso por el molino. La trituración simple a temperatura ambiente requiere múltiples pasadas por los molinos para lograr el mismo resultado. La ventaja de la trituración criogénica es su ma"},
-  111:{r:"C",e:"En el túnel de enfriamiento, el nitrógeno líquido (a –200°C) está en contacto con el caucho (a temperatura ambiente). La energía interna (calor) del caucho fluye hacia el nitrógeno más frío, proceso que reduce la temperatura del caucho. La energía interna del caucho se "},
-  112:{r:"C",e:"A presión constante, un aumento de temperatura aumenta la energía cinética de las partículas, que chocan más frecuente y fuertemente entre sí y contra las paredes. Como las paredes son flexibles, el gas se expande (aumenta el volumen) hasta que la presión interna vuelve"},
-  113:{r:"B",e:"La mariposa presenta metamorfosis completa (holometabolismo): huevo → larva (oruga) → pupa (crisálida) → adulto. Existe una fase intermedia (pupa) entre la larva y el adulto, y las transformaciones son drásticas (la larva no se parece al adulto). Esto corresponde al Mod"},
-  114:{r:"D",e:"Comparando con los rangos de tolerancia: pH = 10,4 (máximo tolerable: 8,8) → fuera de rango. Amoníaco = 25,8 mg/L (máximo: 23,7 mg/L) → fuera de rango. Temperatura = 22,4°C (rango: 19,6–33,7°C) → dentro del rango. Nitrito = 0,9 mg/L (máximo: 1,1 mg/L) → dentro del rango"},
-  115:{r:"C",e:"La intensidad de las gotas sigue la ley del inverso del cuadrado: I ∝ 1/d². A 2 m la intensidad es ¼ mm. A 5 m (2,5 veces más lejos): I = ¼ × (2/5)² = ¼ × 4/25 = 1/25 mm. La intensidad a 5 m es menor que a 2 m, y disminuye proporcionalmente al cuadrado de la distancia."},
-  116:{r:"D",e:"La hipótesis del estudiante era que alcohol y aceite formarían una solución homogénea. El resultado experimental mostró dos capas separadas (aceite abajo, alcohol arriba), lo que es una mezcla heterogénea. Esto refuta la hipótesis: el alcohol no se disuelve en el aceite"},
-  117:{r:"A",e:"Las cuatro etapas: 1) Sin crecimiento (lag) = línea plana inicial. 2) Crecimiento exponencial = línea ascendente. 3) Fase estacionaria (nutrientes agotados) = línea plana en la cima. 4) Muerte progresiva = línea descendente. La opción A muestra la curva clásica de creci"},
-  118:{r:"D",e:"En el cruce, la mosca de ojos rojos tiene alelos G y g (heterocigota). La mosca de ojos blancos tiene alelo g. Del cruce se obtienen descendientes Gg y gg. El individuo resultante mostrado en la figura tiene los alelos G y g, lo que lo hace heterocigoto (tiene dos alelo"},
-  119:{r:"D",e:"Requisitos: punto de ebullición < 130°C, soluble en agua, no conductora. Evaluando: Sustancia 1: –196°C ✓, soluble ✓, conductora ✗. Sustancia 2: 59°C ✓, soluble ✓, conductora ✗. Sustancia 3: –188°C ✓, no soluble ✗, no conductora ✓. Sustancia 4: –34°C ✓, soluble ✓, no co"},
-  120:{r:"B",e:"Durante los cambios de fase, la temperatura permanece constante aunque se siga añadiendo energía (el calor se usa para romper los enlaces, no para subir la temperatura). La gráfica correcta muestra: línea ascendente (sólido) → meseta (fusión a 1.535°C) → línea ascendent"}
-};
+.btn-todo{width:100%;padding:14px;border-radius:13px;border:none;cursor:pointer;
+  font-size:.97rem;font-weight:700;margin-bottom:18px;
+  background:linear-gradient(135deg,var(--azul),var(--morado));
+  color:#fff;box-shadow:var(--sombra);transition:opacity .2s;}
+.btn-todo:hover{opacity:.9;}
+.stats-box{background:#fff;border-radius:15px;padding:18px;box-shadow:var(--sombra);}
+.stats-box h3{font-size:.92rem;font-weight:700;color:var(--oscuro);margin-bottom:12px;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:10px;}
+.si{text-align:center;}
+.si .v{font-size:1.65rem;font-weight:800;color:var(--azul);}
+.si .l{font-size:.73rem;color:#64748b;}
 
-// ── ESTADO ─────────────────────────────────────────────────────────────────
-let usuario       = null;
-let modoActual    = "practica";  // "practica" | "simulacro"
-let timerVisible  = true;
-let qActivas      = [];          // array de IDs de preguntas
-let matActual     = null;
-let idxActual     = 0;
-let respuestas    = {};          // { id: { elegida, correcta, tiempo } }
-let progresoFire  = {};          // cargado desde Firestore
-let tInterval     = null;
-let tPregSeg      = 0;
-let tTotalSeg     = 0;
-let TIMER_INICIO  = 60;          // 1 minuto por pregunta
-let adminData     = [];
+/* QUIZ LAYOUT */
+#p-quiz{background:var(--gris);}
+.quiz-layout{display:flex;flex:1;min-height:0;}
 
-// ── HELPERS ─────────────────────────────────────────────────────────────────
-const $  = id => document.getElementById(id);
-const sp = v  => { $('spinner').className = v ? '' : 'oculto'; };
-const fmt = s => {
-  const neg = s < 0; const abs = Math.abs(s);
-  return (neg ? '-' : '') + Math.floor(abs/60) + ':' + String(abs%60).padStart(2,'0');
-};
-const pad2 = n => String(n).padStart(2,'0');
-const imgSrc = id => `pregunta_${pad2(id)}.jpg`;
-const getMatOf = id => {
-  for(const[k,m] of Object.entries(MATS)) if(id>=m.r[0]&&id<=m.r[1]) return k;
-  return 'matematicas';
-};
-const getPorMat = mat => {
-  if(mat==='todas') return Array.from({length:120},(_,i)=>i+1);
-  const[a,b]=MATS[mat].r; return Array.from({length:b-a+1},(_,i)=>i+a);
-};
-const pantalla = id => {
-  document.querySelectorAll('.pantalla').forEach(p=>p.classList.remove('activa'));
-  $(id).classList.add('activa');
-  window.scrollTo(0,0);
-};
+/* Sidebar */
+.quiz-sidebar{width:215px;min-width:215px;background:#fff;border-right:1px solid var(--borde);
+  padding:14px 10px;overflow-y:auto;position:sticky;top:50px;max-height:calc(100vh - 50px);}
+.sb-title{font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:9px;padding:0 4px;}
+.sb-mat{margin-bottom:12px;}
+.sb-mat-lbl{font-size:.74rem;font-weight:700;padding:3px 8px;border-radius:5px;
+  color:#fff;margin-bottom:5px;display:inline-block;}
+.sb-nums{display:flex;flex-wrap:wrap;gap:3px;}
+.qb{width:26px;height:26px;border-radius:5px;border:1.5px solid var(--borde);
+  background:#fff;font-size:.7rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .12s;color:var(--texto);}
+.qb:hover{border-color:var(--azul);color:var(--azul);}
+.qb.ans{background:#dbeafe;border-color:var(--azul);color:var(--azul);}
+.qb.cur{background:var(--azul);border-color:var(--azul);color:#fff;}
 
-// ── AUTH ─────────────────────────────────────────────────────────────────────
-window.loginGoogle = async () => {
-  sp(true);
-  try {
-    const r = await signInWithPopup(auth, provider);
-    await setDoc(doc(db,'usuarios',r.user.uid), {
-      nombre: r.user.displayName, email: r.user.email,
-      foto: r.user.photoURL, ultimoAcceso: serverTimestamp()
-    }, { merge:true });
-  } catch(e) { alert('Error: ' + e.message); sp(false); }
-};
+/* Zona principal */
+.quiz-main{flex:1;padding:18px;max-width:800px;}
+.quiz-header{background:#fff;border-radius:13px;padding:13px 16px;margin-bottom:16px;
+  box-shadow:var(--sombra);display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.mat-tag{font-size:.8rem;font-weight:700;padding:4px 12px;border-radius:99px;color:#fff;}
+.pq{flex:1;min-width:150px;}
+.pq .pt{font-size:.76rem;color:#64748b;margin-bottom:3px;}
+.pq .pb{height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;}
+.pq .pf{height:100%;border-radius:99px;transition:width .35s;}
+.timers{display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+.t-preg{font-size:1.05rem;font-weight:800;color:var(--oscuro);
+  font-variant-numeric:tabular-nums;min-width:58px;text-align:right;}
+.t-preg.urgente{color:var(--rojo);animation:pulso 1s infinite;}
+.t-preg.neg{color:var(--naranja);}
+.t-total{font-size:.72rem;color:#94a3b8;font-variant-numeric:tabular-nums;text-align:right;}
+@keyframes pulso{0%,100%{opacity:1}50%{opacity:.4}}
 
-window.cerrarSesion = async () => { await signOut(auth); };
+/* Tarjeta pregunta */
+.card-preg{background:#fff;border-radius:17px;padding:26px 22px;box-shadow:var(--sombra);margin-bottom:14px;}
+.num-preg{font-size:.73rem;font-weight:700;color:#94a3b8;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:10px;}
+.enunciado img{width:100%;border-radius:8px;display:block;max-height:500px;object-fit:contain;}
+.img-ph{display:flex;align-items:center;justify-content:center;
+  height:100px;background:#f8fafc;border-radius:8px;color:#94a3b8;font-size:.88rem;}
 
-onAuthStateChanged(auth, async u => {
-  sp(true);
-  if(u) {
-    usuario = u;
-    $('foto-u').src = u.photoURL || '';
-    $('nombre-u').textContent = u.displayName?.split(' ')[0] || '';
-    $('saludo').textContent = `¡Hola, ${u.displayName?.split(' ')[0]}! 👋`;
-    await cargarProgreso();
-    mostrarHome();
-  } else {
-    usuario = null;
-    pantalla('p-login');
-  }
-  sp(false);
-});
+/* Opciones simulacro */
+.ops-sim{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:18px;}
+.op-sim{padding:16px 8px;border:2px solid var(--borde);border-radius:11px;cursor:pointer;
+  transition:all .14s;font-size:1.2rem;font-weight:800;background:#fff;color:var(--oscuro);text-align:center;}
+.op-sim:hover{border-color:var(--azul);background:#eff6ff;color:var(--azul);}
+.op-sim.sel{border-color:var(--azul);background:var(--azul);color:#fff;}
+@media(max-width:480px){.ops-sim{grid-template-columns:repeat(2,1fr);}}
 
-// ── FIRESTORE ─────────────────────────────────────────────────────────────────
-async function guardarResp(mat, id, datos) {
-  if(!usuario) return;
-  try {
-    await setDoc(doc(db,'usuarios',usuario.uid,'progreso',mat,'respuestas',String(id)), datos);
-    // Actualizar metadata de sesión
-    await setDoc(doc(db,'usuarios',usuario.uid,'sesion','actual'), {
-      materiaActual: matActual, indice: idxActual, modo: modoActual,
-      tTotal: tTotalSeg, ts: serverTimestamp()
-    });
-  } catch(e) { console.warn('FS write:', e.message); }
+/* Opciones práctica */
+.ops{display:flex;flex-direction:column;gap:8px;margin-top:18px;}
+.op{padding:12px 15px;border:2px solid var(--borde);border-radius:10px;cursor:pointer;
+  transition:all .16s;font-size:.93rem;background:#fff;color:var(--texto);text-align:left;}
+.op:hover:not(.bloq){border-color:var(--azul);background:#eff6ff;}
+.op.correcta{border-color:#059669;background:#f0fdf4;color:#065f46;font-weight:700;}
+.op.incorrecta{border-color:#dc2626;background:#fef2f2;color:#991b1b;}
+.op.bloq{cursor:default;}
+.expl{margin-top:14px;padding:13px 16px;border-radius:10px;background:#eff6ff;
+  border-left:4px solid var(--azul);font-size:.86rem;line-height:1.6;display:none;}
+.expl.vis{display:block;}
+.expl strong{color:var(--azul);}
+
+/* Nav quiz */
+.quiz-nav-btns{display:flex;justify-content:space-between;gap:9px;flex-wrap:wrap;}
+.bn{padding:11px 22px;border-radius:10px;border:none;cursor:pointer;
+  font-size:.91rem;font-weight:700;transition:opacity .18s;}
+.bn.sig{background:var(--azul);color:#fff;display:none;}
+.bn.sig.vis{display:block;}
+.bn.sig:hover{opacity:.88;}
+.bn.ter{background:var(--verde);color:#fff;}
+.bn.ter:hover{opacity:.88;}
+.bn.ant{background:#fff;border:2px solid var(--borde);color:var(--oscuro);}
+.bn.ant:hover{border-color:var(--azul);color:var(--azul);}
+
+/* RESULTADOS */
+#p-resultados .contenido{padding:26px 18px 56px;max-width:880px;margin:0 auto;width:100%;}
+.res-hdr{text-align:center;margin-bottom:24px;}
+.res-hdr .em{font-size:3.2rem;}
+.res-hdr h2{font-size:1.6rem;color:var(--oscuro);margin-top:7px;}
+.res-hdr p{color:#64748b;margin-top:3px;}
+.rg{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:11px;margin-bottom:22px;}
+.rc{background:#fff;border-radius:13px;padding:16px;text-align:center;box-shadow:var(--sombra);}
+.rc .v{font-size:1.8rem;font-weight:800;}
+.rc .l{font-size:.73rem;color:#64748b;margin-top:2px;}
+.rc.verde .v{color:var(--verde);}.rc.rojo .v{color:var(--rojo);}
+.rc.azul .v{color:var(--azul);}.rc.gris .v{color:#64748b;}
+.por-mat{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px;margin-bottom:22px;}
+.mat-rc{background:#fff;border-radius:12px;padding:13px;box-shadow:var(--sombra);}
+.mat-rc h4{font-size:.86rem;font-weight:700;margin-bottom:7px;}
+.mbb{background:#e2e8f0;border-radius:99px;height:6px;margin-bottom:3px;}
+.mbf{height:100%;border-radius:99px;transition:width .8s;}
+.mfr{font-size:.73rem;color:#64748b;}
+
+/* HOJA TIPO ICFES */
+.hoja-wrap{background:#fff;border-radius:15px;padding:22px;box-shadow:var(--sombra);margin-bottom:22px;}
+.hoja-wrap h3{font-weight:700;color:var(--oscuro);margin-bottom:3px;}
+.hoja-sub{font-size:.78rem;color:#64748b;margin-bottom:14px;}
+.hoja-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0 20px;}
+@media(max-width:580px){.hoja-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:360px){.hoja-grid{grid-template-columns:1fr;}}
+.hf{display:flex;align-items:center;gap:7px;padding:4px 3px;border-bottom:1px solid #f1f5f9;font-size:.8rem;}
+.hn{width:24px;min-width:24px;height:24px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-weight:800;font-size:.76rem;border:2px solid transparent;}
+.hn.ok{background:#dcfce7;color:#166534;border-color:#bbf7d0;}
+.hn.mal{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
+.hn.sk{background:#fef9c3;color:#854d0e;border-color:#fef08a;}
+.hopc{display:flex;gap:3px;}
+.hop{width:20px;height:20px;border-radius:50%;border:1.5px solid #cbd5e1;
+  display:flex;align-items:center;justify-content:center;font-size:.64rem;font-weight:700;color:#94a3b8;}
+.hop.cor{background:var(--verde);border-color:var(--verde);color:#fff;}
+.hop.inc{background:var(--rojo);border-color:var(--rojo);color:#fff;}
+.hop.marc{background:var(--azul);border-color:var(--azul);color:#fff;}
+
+/* Detalle */
+.det-sec{background:#fff;border-radius:15px;padding:20px;box-shadow:var(--sombra);margin-bottom:22px;}
+.det-sec h3{font-weight:700;color:var(--oscuro);margin-bottom:12px;}
+.det-item{display:flex;gap:11px;align-items:flex-start;border-bottom:1px solid #f1f5f9;padding:9px 0;font-size:.84rem;}
+.det-item:last-child{border-bottom:none;}
+.det-thumb{width:68px;min-width:68px;height:50px;object-fit:cover;border-radius:5px;border:1px solid var(--borde);}
+.det-info{flex:1;}
+.bgs{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;}
+.bg{padding:2px 8px;border-radius:4px;font-size:.73rem;font-weight:700;}
+.bg.ok{background:#dcfce7;color:#166534;}.bg.mal{background:#fee2e2;color:#991b1b;}
+.bg.cor{background:#dbeafe;color:#1e40af;}.bg.sk{background:#fef9c3;color:#854d0e;}
+.expl-t{font-size:.76rem;color:#64748b;margin-top:3px;line-height:1.5;}
+
+.btns-res{display:flex;gap:9px;flex-wrap:wrap;}
+.br{flex:1;min-width:125px;padding:12px;border-radius:10px;border:none;cursor:pointer;
+  font-size:.91rem;font-weight:700;transition:opacity .2s;}
+.br.pri{background:var(--azul);color:#fff;}.br.sec{background:#fff;border:2px solid var(--borde);color:var(--oscuro);}
+.br:hover{opacity:.88;}
+
+/* ADMIN */
+#p-admin{background:var(--gris);}
+#p-admin .contenido{padding:26px 18px 48px;max-width:1000px;margin:0 auto;width:100%;}
+#p-admin h2{font-size:1.35rem;font-weight:700;color:var(--oscuro);margin-bottom:18px;}
+.adm-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:11px;margin-bottom:22px;}
+.adm-s{background:#fff;border-radius:12px;padding:15px;box-shadow:var(--sombra);text-align:center;}
+.adm-s .v{font-size:1.9rem;font-weight:800;color:var(--azul);}
+.adm-s .l{font-size:.76rem;color:#64748b;}
+.adm-table{background:#fff;border-radius:15px;padding:18px;box-shadow:var(--sombra);overflow-x:auto;margin-bottom:18px;}
+.adm-table h3{font-size:.97rem;font-weight:700;margin-bottom:12px;color:var(--oscuro);}
+table{width:100%;border-collapse:collapse;font-size:.83rem;}
+thead tr{background:#f8fafc;}
+th{padding:9px 11px;text-align:left;font-weight:700;color:#64748b;
+  font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid var(--borde);}
+td{padding:9px 11px;border-bottom:1px solid var(--borde);color:var(--texto);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#f8fafc;}
+.td-name{display:flex;align-items:center;gap:7px;}
+.td-av{width:26px;height:26px;border-radius:50%;object-fit:cover;}
+.pp{padding:2px 9px;border-radius:99px;font-size:.73rem;font-weight:700;}
+.pp.alto{background:#dcfce7;color:#166534;}.pp.medio{background:#fef9c3;color:#854d0e;}
+.pp.bajo{background:#fee2e2;color:#991b1b;}
+.mb{display:inline-block;padding:2px 6px;border-radius:3px;font-size:.69rem;font-weight:700;margin:1px;color:#fff;}
+.adm-actions{display:flex;gap:9px;flex-wrap:wrap;}
+.ba{padding:10px 17px;border-radius:9px;border:none;cursor:pointer;
+  font-size:.86rem;font-weight:700;transition:opacity .18s;}
+.ba.danger{background:var(--rojo);color:#fff;}.ba.neutral{background:#fff;border:2px solid var(--borde);color:var(--oscuro);}
+.ba:hover{opacity:.88;}
+.adm-search{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.adm-search input{flex:1;min-width:200px;padding:9px 13px;border:1.5px solid var(--borde);
+  border-radius:9px;font-size:.88rem;outline:none;}
+.adm-search input:focus{border-color:var(--azul);}
+
+/* SPINNER */
+#spinner{position:fixed;inset:0;background:rgba(255,255,255,.85);
+  display:flex;align-items:center;justify-content:center;z-index:9999;}
+.spin{width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:var(--azul);
+  border-radius:50%;animation:girar 1s linear infinite;}
+@keyframes girar{to{transform:rotate(360deg);}}
+#spinner.oculto{display:none;}
+
+@media(max-width:700px){.quiz-sidebar{display:none;}}
+@media(max-width:520px){.login-card{padding:30px 18px;}.card-preg{padding:16px 13px;}}
+
+/* ══ IMAGEN PREGUNTA — tamaño controlado ══ */
+#q-img img {
+  width: 100%;
+  max-height: 380px;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
 }
 
-async function cargarProgreso() {
-  if(!usuario) return;
-  progresoFire = {};
-  for(const mat of Object.keys(MATS)) {
-    progresoFire[mat] = {};
-    try {
-      const snap = await getDocs(
-        collection(db,'usuarios',usuario.uid,'progreso',mat,'respuestas'));
-      snap.forEach(d => { progresoFire[mat][d.id] = d.data(); });
-    } catch(e) {}
-  }
+/* ══ CONFIGURACIÓN CRONÓMETRO (HOME) ══ */
+.timer-config-box {
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 16px;
 }
-
-async function cargarSesion() {
-  // Restaurar sesión anterior si existe
-  if(!usuario) return null;
-  try {
-    const d = await getDoc(doc(db,'usuarios',usuario.uid,'sesion','actual'));
-    return d.exists() ? d.data() : null;
-  } catch(e) { return null; }
+.tc-header { display: flex; align-items: center; gap: 10px; }
+.tc-title  { font-size: .88rem; font-weight: 600; color: #334155; }
+.tc-body   { margin-top: 12px; padding-top: 12px; border-top: 1px solid #f1f5f9; }
+.tc-modos  { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.tc-modo   {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: .86rem; color: #334155; padding: 8px 12px;
+  border: 1.5px solid #e2e8f0; border-radius: 8px; transition: all .15s;
 }
+.tc-modo:has(input:checked) { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 600; }
+.tc-modo input { accent-color: #2563eb; width: 15px; height: 15px; }
+.tc-valor { display: flex; align-items: center; margin-top: 4px; flex-wrap: wrap; gap: 4px; }
+.tc-valor input:focus { border-color: #2563eb; }
 
-async function resetMatFirestore(mat) {
-  if(!usuario) return;
-  try {
-    const snap = await getDocs(
-      collection(db,'usuarios',usuario.uid,'progreso',mat,'respuestas'));
-    await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
-  } catch(e){}
-  progresoFire[mat] = {};
+/* ══ SIDEBAR TOGGLE ══ */
+.sb-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 9px; padding: 0 2px;
 }
-
-window.resetMiProgreso = async () => {
-  if(!confirm('¿Borrar todo tu progreso guardado?')) return;
-  sp(true);
-  for(const m of Object.keys(MATS)) await resetMatFirestore(m);
-  try { await deleteDoc(doc(db,'usuarios',usuario.uid,'sesion','actual')); } catch(e){}
-  await cargarProgreso();
-  mostrarHome();
-  sp(false);
-};
-
-// ── MODO ─────────────────────────────────────────────────────────────────────
-window.setModo = m => {
-  modoActual = m;
-  $('bm-practica').className = 'modo-btn' + (m==='practica'?' activo':'');
-  $('bm-simulacro').className = 'modo-btn' + (m==='simulacro'?' activo':'');
-};
-
-// ── NAVEGACIÓN ────────────────────────────────────────────────────────────────
-window.mostrarHome = () => {
-  pararTimer(); construirHome(); pantalla('p-home');
-};
-window.salirQuiz = () => {
-  if(confirm('¿Salir? Tu progreso está guardado y podrás continuar después.')) {
-    pararTimer(); mostrarHome();
-  }
-};
-
-function construirHome() {
-  const grid = $('grid-materias');
-  grid.innerHTML = '';
-  let tR=0, tC=0, tT=0;
-
-  for(const[k,m] of Object.entries(MATS)) {
-    const ids    = getPorMat(k);
-    const prog   = progresoFire[k] || {};
-    const hechas = Object.keys(prog).length;
-    const corr   = Object.values(prog).filter(r=>r.correcta).length;
-    tR += hechas; tC += corr;
-    tT += Object.values(prog).reduce((s,r)=>s+(r.tiempo||0), 0);
-    const pct = ids.length ? Math.round(hechas/ids.length*100) : 0;
-
-    const card = document.createElement('div');
-    card.className = 'card-mat';
-    card.style.color = m.c;
-    card.innerHTML = `
-      <div class="em">${m.e}</div>
-      <h3>${m.n}</h3>
-      <div class="nm">${ids.length} preguntas</div>
-      <div class="pb"><div class="pf" style="width:${pct}%;background:${m.c}"></div></div>
-      <div class="pt">${hechas}/${ids.length} respondidas · ${corr} correctas</div>`;
-    card.onclick = () => iniciarQuiz(k);
-    grid.appendChild(card);
-  }
-
-  $('st-tot').textContent = tR;
-  $('st-cor').textContent = tC;
-  $('st-pct').textContent = tR ? Math.round(tC/tR*100)+'%' : '—';
-  $('st-tim').textContent = fmt(tT);
+.sb-close-btn {
+  background: none; border: none; cursor: pointer; font-size: .85rem;
+  color: #94a3b8; padding: 2px 6px; border-radius: 4px; transition: all .15s;
 }
+.sb-close-btn:hover { background: #fee2e2; color: #dc2626; }
 
-// ── QUIZ ─────────────────────────────────────────────────────────────────────
-window.iniciarQuiz = async mat => {
-  sp(true);
-
-  // Intentar reanudar sesión guardada
-  const sesion = await cargarSesion();
-  if(sesion && sesion.materiaActual === mat && confirm('Tienes un examen en progreso. ¿Deseas continuar donde lo dejaste?')) {
-    matActual  = mat;
-    modoActual = sesion.modo || modoActual;
-    qActivas   = getPorMat(mat);
-    idxActual  = Math.min(sesion.indice || 0, qActivas.length-1);
-    tTotalSeg  = sesion.tTotal || 0;
-    // Cargar respuestas ya guardadas en Firestore
-    respuestas = {};
-    const prog = progresoFire[mat==='todas' ? null : mat] || {};
-    // para 'todas' cruzar todas las materias
-    if(mat === 'todas') {
-      for(const[k,v] of Object.entries(progresoFire))
-        Object.entries(v).forEach(([id,r])=>{ respuestas[Number(id)] = r; });
-    } else {
-      Object.entries(prog).forEach(([id,r])=>{ respuestas[Number(id)] = r; });
-    }
-  } else {
-    matActual  = mat;
-    qActivas   = getPorMat(mat);
-    idxActual  = 0;
-    respuestas = {};
-    tTotalSeg  = 0;
-  }
-
-  tPregSeg = 0;
-  timerVisible = $('timer-on').checked;
-
-  const color  = mat==='todas' ? '#1e293b' : MATS[mat].c;
-  const nombre = mat==='todas' ? 'Simulacro completo' : MATS[mat].n;
-  const tag = $('qh-mat');
-  tag.textContent = nombre; tag.style.background = color;
-  $('pq .pf') && ($('qh-barra').style.background = color);
-
-  // Mostrar/ocultar cronómetros
-  $('timers-wrap').style.display = timerVisible ? 'flex' : 'none';
-
-  construirSidebar();
-  pantalla('p-quiz');
-  renderPregunta();
-  iniciarTimer();
-  sp(false);
-};
-
-// ── SIDEBAR ──────────────────────────────────────────────────────────────────
-function construirSidebar() {
-  const sb = $('sb-content');
-  sb.innerHTML = '';
-
-  const matsEnUso = matActual==='todas' ? Object.keys(MATS) : [matActual];
-  matsEnUso.forEach(k => {
-    const m    = MATS[k];
-    const ids  = getPorMat(k).filter(id=>qActivas.includes(id));
-    const wrap = document.createElement('div');
-    wrap.className = 'sb-mat';
-    wrap.innerHTML = `<div class="sb-mat-lbl" style="background:${m.c}">${m.e} ${m.n}</div>
-                      <div class="sb-nums" id="sb-nums-${k}"></div>`;
-    sb.appendChild(wrap);
-  });
-  actualizarSidebar();
+/* Botón para MOSTRAR el panel cuando está oculto */
+.btn-sb-show {
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 7px;
+  padding: 5px 9px; font-size: .82rem; cursor: pointer; color: #334155;
+  transition: all .15s; white-space: nowrap; flex-shrink: 0;
 }
+.btn-sb-show:hover { border-color: #2563eb; color: #2563eb; }
 
-function actualizarSidebar() {
-  const matsEnUso = matActual==='todas' ? Object.keys(MATS) : [matActual];
-  matsEnUso.forEach(k => {
-    const ids = getPorMat(k).filter(id=>qActivas.includes(id));
-    const cont = $(`sb-nums-${k}`);
-    if(!cont) return;
-    cont.innerHTML = '';
-    ids.forEach(id => {
-      const btn = document.createElement('button');
-      btn.className = 'qb';
-      btn.textContent = id;
-      const idx = qActivas.indexOf(id);
-      if(respuestas[id]) btn.classList.add('ans');
-      if(idx === idxActual) btn.classList.add('cur');
-      btn.onclick = () => { idxActual = idx; renderPregunta(); };
-      cont.appendChild(btn);
-    });
-  });
+/* Botón toggle cronómetro en quiz */
+.btn-timer-toggle {
+  background: none; border: 1.5px solid #e2e8f0; border-radius: 7px;
+  padding: 4px 8px; font-size: .85rem; cursor: pointer; color: #64748b;
+  transition: all .15s; flex-shrink: 0;
 }
+.btn-timer-toggle:hover { border-color: #7c3aed; color: #7c3aed; }
 
-// ── RENDER PREGUNTA ──────────────────────────────────────────────────────────
-function renderPregunta() {
-  const id  = qActivas[idxActual];
-  const tot = qActivas.length;
-  const mat = getMatOf(id);
-  const color = MATS[mat]?.c || '#2563eb';
-
-  $('q-num').textContent = `Pregunta ${id}`;
-  $('qh-prog').textContent = `Pregunta ${idxActual+1} de ${tot}`;
-  $('qh-barra').style.width  = ((idxActual)/tot*100)+'%';
-  $('qh-barra').style.background = color;
-  tPregSeg = 0;
-
-  // Imagen
-  $('q-img').innerHTML = `<img src="${imgSrc(id)}" alt="Pregunta ${id}" loading="lazy"
-    style="opacity:0;transition:opacity .3s"
-    onload="this.style.opacity=1"
-    onerror="this.parentElement.innerHTML='<div class=img-ph>⚠️ Imagen no disponible</div>'"/>`;
-
-  // Limpiar explicación
-  const expl = $('q-expl');
-  expl.className = 'expl'; expl.innerHTML = '';
-
-  // Opciones
-  const opsEl = $('q-ops');
-  opsEl.innerHTML = '';
-  if(modoActual === 'simulacro') {
-    const grid = document.createElement('div');
-    grid.className = 'ops-sim';
-    ['A','B','C','D'].forEach(l => {
-      const btn = document.createElement('button');
-      btn.className = 'op-sim' + (respuestas[id]?.elegida===l ? ' sel' : '');
-      btn.textContent = l;
-      btn.onclick = () => {
-        document.querySelectorAll('.op-sim').forEach(b=>b.classList.remove('sel'));
-        btn.classList.add('sel');
-        const ok = l === QA[id].r;
-        respuestas[id] = { elegida:l, correcta:ok, tiempo:tPregSeg };
-        const mk = matActual==='todas' ? getMatOf(id) : matActual;
-        guardarResp(mk, id, respuestas[id]);
-        if(!progresoFire[mk]) progresoFire[mk]={};
-        progresoFire[mk][String(id)] = respuestas[id];
-        actualizarSidebar();
-        actualizarBtnTerminar();
-      };
-      grid.appendChild(btn);
-    });
-    opsEl.appendChild(grid);
-    $('btn-sig').style.display = 'none';
-    $('btn-ant').style.display = idxActual > 0 ? 'inline-block' : 'none';
-    actualizarBtnTerminar();
-  } else {
-    // Modo práctica
-    const lista = document.createElement('div');
-    lista.className = 'ops';
-    ['A','B','C','D'].forEach(l => {
-      const btn = document.createElement('button');
-      btn.className = 'op';
-      btn.textContent = l;
-      btn.onclick = () => responderPractica(l, id);
-      lista.appendChild(btn);
-    });
-    opsEl.appendChild(lista);
-    $('btn-sig').classList.remove('vis');
-    $('btn-ant').style.display = idxActual > 0 ? 'inline-block' : 'none';
-    $('btn-ter').style.display = 'none';
-
-    // Si ya respondió esta pregunta, mostrar feedback
-    if(respuestas[id]) {
-      const r = respuestas[id];
-      document.querySelectorAll('.op').forEach(b => {
-        b.classList.add('bloq');
-        if(b.textContent===QA[id].r) b.classList.add('correcta');
-        if(b.textContent===r.elegida&&!r.correcta) b.classList.add('incorrecta');
-        b.onclick = null;
-      });
-      expl.innerHTML = `<strong>${r.correcta?'✅ ¡Correcto!':'❌ Incorrecto.'}</strong> ${QA[id].e}`;
-      expl.className = 'expl vis';
-      $('btn-sig').classList.add('vis');
-    }
-  }
-  actualizarSidebar();
+/* Opciones en modo práctica — grid 2x2 igual que simulacro */
+.ops { display: grid; grid-template-columns: repeat(2,1fr); gap: 9px; margin-top: 18px; }
+.op  {
+  padding: 14px 12px; border: 2px solid #e2e8f0; border-radius: 10px; cursor: pointer;
+  transition: all .16s; font-size: .93rem; background: #fff; color: #334155; text-align: left;
 }
-
-function responderPractica(elegida, id) {
-  const ok = elegida === QA[id].r;
-  document.querySelectorAll('.op').forEach(b => {
-    b.classList.add('bloq');
-    if(b.textContent===QA[id].r) b.classList.add('correcta');
-    if(b.textContent===elegida&&!ok) b.classList.add('incorrecta');
-    b.onclick = null;
-  });
-  const expl = $('q-expl');
-  expl.innerHTML = `<strong>${ok?'✅ ¡Correcto!':'❌ Incorrecto.'}</strong> ${QA[id].e}`;
-  expl.className = 'expl vis';
-  $('btn-sig').classList.add('vis');
-
-  respuestas[id] = { elegida, correcta:ok, tiempo:tPregSeg };
-  const mk = matActual==='todas' ? getMatOf(id) : matActual;
-  guardarResp(mk, id, respuestas[id]);
-  if(!progresoFire[mk]) progresoFire[mk]={};
-  progresoFire[mk][String(id)] = respuestas[id];
-  actualizarSidebar();
-}
-
-function actualizarBtnTerminar() {
-  const respondidas = qActivas.filter(id=>respuestas[id]).length;
-  $('btn-ter').style.display = (modoActual==='simulacro') ? 'inline-block' : 'none';
-  $('btn-ter').textContent = `✅ Terminar (${respondidas}/${qActivas.length})`;
-}
-
-window.siguientePregunta = () => {
-  if(idxActual < qActivas.length-1) { idxActual++; renderPregunta(); }
-  else { pararTimer(); mostrarResultados(); }
-};
-window.anteriorPregunta = () => {
-  if(idxActual > 0) { idxActual--; renderPregunta(); }
-};
-window.terminarSimulacro = () => {
-  if(confirm('¿Terminar el simulacro y ver resultados?')) { pararTimer(); mostrarResultados(); }
-};
-
-// ── TIMER ─────────────────────────────────────────────────────────────────────
-function iniciarTimer() {
-  pararTimer();
-  tInterval = setInterval(() => {
-    tTotalSeg++; tPregSeg++;
-    const restante = TIMER_INICIO - tPregSeg;
-
-    if(timerVisible) {
-      const el = $('t-preg');
-      if(restante >= 0) {
-        el.textContent = '⏱ ' + fmt(restante);
-        el.className = 't-preg' + (restante<=10?' urgente':'');
-      } else {
-        el.textContent = '⏱ ' + fmt(restante);
-        el.className = 't-preg neg';
-      }
-      $('t-total').textContent = 'Total: ' + fmt(tTotalSeg);
-    }
-  }, 1000);
-}
-function pararTimer() { clearInterval(tInterval); }
-
-// ── RESULTADOS ────────────────────────────────────────────────────────────────
-function mostrarResultados() {
-  const vals     = Object.values(respuestas);
-  const total    = qActivas.length;
-  const correctas = vals.filter(r=>r.correcta).length;
-  const resp     = vals.length;
-  const pct      = resp ? Math.round(correctas/resp*100) : 0;
-  const tT       = vals.reduce((s,r)=>s+(r.tiempo||0),0);
-
-  const em = pct>=80?'🏆':pct>=60?'😊':pct>=40?'💪':'📚';
-  const ti = pct>=80?'¡Excelente resultado!':pct>=60?'¡Buen trabajo!':pct>=40?'¡Sigue practicando!':'¡No te rindas!';
-  $('res-em').textContent  = em;
-  $('res-tit').textContent = ti;
-  $('res-sub').textContent = `${resp} respondidas de ${total} · ${correctas} correctas`;
-  $('res-cor').textContent = correctas;
-  $('res-inc').textContent = resp - correctas;
-  $('res-pct').textContent = pct + '%';
-  $('res-tim').textContent = fmt(tT);
-  $('btn-reintentar').onclick = () => reintentar();
-
-  // Por materia
-  const pm = $('por-mat'); pm.innerHTML = '';
-  const mkeys = matActual==='todas' ? Object.keys(MATS) : [matActual];
-  mkeys.forEach(k => {
-    const m   = MATS[k]; if(!m) return;
-    const ids = getPorMat(k).filter(id=>qActivas.includes(id));
-    if(!ids.length) return;
-    const ok  = ids.filter(id=>respuestas[id]?.correcta).length;
-    const p   = ids.length ? Math.round(ok/ids.length*100) : 0;
-    const div = document.createElement('div'); div.className='mat-rc';
-    div.innerHTML=`<h4>${m.e} ${m.n}</h4>
-      <div class="mbb"><div class="mbf" style="width:${p}%;background:${m.c}"></div></div>
-      <div class="mfr">${ok}/${ids.length} correctas (${p}%)</div>`;
-    pm.appendChild(div);
-  });
-
-  // ── HOJA DE RESPUESTAS TIPO ICFES ──
-  const hoja = $('hoja-grid'); hoja.innerHTML = '';
-  qActivas.forEach(id => {
-    const r   = respuestas[id];
-    const cor = QA[id].r;
-    const ok  = r?.correcta;
-    const sk  = !r;
-
-    const fila = document.createElement('div'); fila.className='hf';
-    // Número coloreado
-    const hn   = document.createElement('div');
-    hn.className = 'hn ' + (sk?'sk':ok?'ok':'mal');
-    hn.textContent = id;
-    fila.appendChild(hn);
-
-    // Opciones A B C D
-    const hopc = document.createElement('div'); hopc.className='hopc';
-    ['A','B','C','D'].forEach(l => {
-      const op = document.createElement('div');
-      op.className = 'hop';
-      op.textContent = l;
-      if(!r && l===cor) op.classList.add('cor');                           // sin responder → mostrar correcta
-      else if(r && l===cor) op.classList.add('cor');                       // correcta en verde
-      else if(r && l===r.elegida && !ok) op.classList.add('inc');          // elección errónea en rojo
-      hopc.appendChild(op);
-    });
-    fila.appendChild(hopc);
-    hoja.appendChild(fila);
-  });
-
-  // ── DETALLE CON EXPLICACIONES ──
-  const det = $('det-list'); det.innerHTML = '';
-  qActivas.forEach(id => {
-    const r   = respuestas[id];
-    const cor = QA[id].r;
-    const ok  = r?.correcta;
-    const div = document.createElement('div'); div.className='det-item';
-    div.innerHTML=`
-      <img class="det-thumb" src="${imgSrc(id)}" alt="P${id}"
-           onerror="this.style.display='none'"/>
-      <div class="det-info">
-        <strong>P${id}</strong> — ${MATS[getMatOf(id)]?.n||''}
-        <div class="bgs">
-          ${!r ? `<span class="bg sk">Sin responder</span><span class="bg cor">Correcta: ${cor}</span>` : ''}
-          ${r&&ok  ? `<span class="bg ok">✓ ${r.elegida}</span>` : ''}
-          ${r&&!ok ? `<span class="bg mal">Tu resp: ${r.elegida}</span><span class="bg cor">Correcta: ${cor}</span>` : ''}
-        </div>
-        <div class="expl-t">${QA[id].e.substring(0,200)}…</div>
-      </div>`;
-    det.appendChild(div);
-  });
-
-  // Guardar resultado final en Firestore
-  guardarResultadoFinal(pct, correctas, total, tT);
-  pantalla('p-resultados');
-}
-
-async function guardarResultadoFinal(pct, cor, tot, tiempo) {
-  if(!usuario) return;
-  try {
-    await setDoc(doc(db,'usuarios',usuario.uid,'resultados', new Date().toISOString().slice(0,19).replace(/:/g,'-')), {
-      fecha: serverTimestamp(), modo: modoActual,
-      materia: matActual, total: tot, correctas: cor, pct, tiempo
-    });
-    // Limpiar sesión al terminar
-    await deleteDoc(doc(db,'usuarios',usuario.uid,'sesion','actual'));
-  } catch(e){}
-}
-
-window.reintentar = async () => {
-  sp(true);
-  if(matActual!=='todas') await resetMatFirestore(matActual);
-  else for(const m of Object.keys(MATS)) await resetMatFirestore(m);
-  await iniciarQuiz(matActual);
-  sp(false);
-};
-
-// ── ADMIN ─────────────────────────────────────────────────────────────────────
-window.irAdmin = () => {
-  const u = prompt('Usuario admin:');
-  if(u !== ADMIN_USER) { alert('Usuario incorrecto'); return; }
-  const p = prompt('Contraseña:');
-  if(p !== ADMIN_PASS) { alert('Contraseña incorrecta'); return; }
-  cargarAdmin();
-};
-
-window.cargarAdmin = async () => {
-  sp(true);
-  pantalla('p-admin');
-  try {
-    const snap = await getDocs(collection(db,'usuarios'));
-    adminData = [];
-
-    for(const d of snap.docs) {
-      const u = d.data();
-      const uid = d.id;
-      let totalResp=0, totalCor=0, totalTiempo=0;
-      const matData = {};
-
-      for(const mat of Object.keys(MATS)) {
-        try {
-          const rs = await getDocs(collection(db,'usuarios',uid,'progreso',mat,'respuestas'));
-          let r=0, c=0;
-          rs.forEach(rd => { const x=rd.data(); r++; if(x.correcta) c++; totalTiempo+=(x.tiempo||0); });
-          totalResp+=r; totalCor+=c;
-          matData[mat]={r,c};
-        } catch(e){}
-      }
-      adminData.push({uid, nombre:u.nombre||'', email:u.email||'', foto:u.foto||'',
-        acceso: u.ultimoAcceso, totalResp, totalCor, totalTiempo, matData});
-    }
-
-    renderTablaAdmin(adminData);
-
-    // Stats globales
-    const total    = adminData.length;
-    const activos  = adminData.filter(a=>a.totalResp>0).length;
-    const promedio = activos ? Math.round(adminData.filter(a=>a.totalResp>0)
-      .reduce((s,a)=>s+Math.round(a.totalCor/a.totalResp*100),0)/activos) : 0;
-    const completos = adminData.filter(a=>a.totalResp>=120).length;
-    $('adm-total').textContent    = total;
-    $('adm-activos').textContent  = activos;
-    $('adm-promedio').textContent = promedio+'%';
-    $('adm-completos').textContent= completos;
-
-  } catch(e) { alert('Error cargando datos: '+e.message); }
-  sp(false);
-};
-
-function renderTablaAdmin(data) {
-  const tbody = $('adm-tbody'); tbody.innerHTML = '';
-  data.forEach(a => {
-    const pct  = a.totalResp ? Math.round(a.totalCor/a.totalResp*100) : 0;
-    const lvl  = pct>=70?'alto':pct>=50?'medio':'bajo';
-    const matBadges = Object.entries(MATS).map(([k,m])=>{
-      const d = a.matData[k]||{r:0,c:0};
-      return `<span class="mb" style="background:${m.c}">${m.e} ${d.c}/${d.r}</span>`;
-    }).join('');
-    const fecha = a.acceso?.toDate ? a.acceso.toDate().toLocaleDateString('es-CO') : '—';
-    const tr = document.createElement('tr');
-    tr.innerHTML=`
-      <td><div class="td-name"><img class="td-av" src="${a.foto}" onerror="this.style.display='none'"/>
-        <div><div style="font-weight:600">${a.nombre}</div><div style="font-size:.75rem;color:#64748b">${a.email}</div></div>
-      </div></td>
-      <td>${fecha}</td>
-      <td>${matBadges}</td>
-      <td><span class="pp ${lvl}">${pct}% (${a.totalCor}/${a.totalResp})</span></td>
-      <td>${fmt(a.totalTiempo)}</td>
-      <td><button class="ba danger" style="padding:5px 10px;font-size:.75rem"
-          onclick="resetEstudiante('${a.uid}','${a.nombre}')">Reset</button></td>`;
-    tbody.appendChild(tr);
-  });
-}
-
-window.filtrarEstudiantes = () => {
-  const q = $('adm-buscar').value.toLowerCase();
-  const filtrado = adminData.filter(a =>
-    a.nombre.toLowerCase().includes(q) || a.email.toLowerCase().includes(q));
-  renderTablaAdmin(filtrado);
-};
-
-window.resetEstudiante = async (uid, nombre) => {
-  if(!confirm(`¿Resetear todo el progreso de ${nombre}?`)) return;
-  sp(true);
-  try {
-    for(const mat of Object.keys(MATS)) {
-      const snap = await getDocs(collection(db,'usuarios',uid,'progreso',mat,'respuestas'));
-      await Promise.all(snap.docs.map(d=>deleteDoc(d.ref)));
-    }
-    try { await deleteDoc(doc(db,'usuarios',uid,'sesion','actual')); } catch(e){}
-    alert(`Progreso de ${nombre} reseteado.`);
-    await cargarAdmin();
-  } catch(e) { alert('Error: '+e.message); }
-  sp(false);
-};
-
-window.resetTodosAdmin = async () => {
-  if(!confirm('⚠️ ¿Borrar el progreso de TODOS los estudiantes? Esta acción no se puede deshacer.')) return;
-  sp(true);
-  try {
-    const snap = await getDocs(collection(db,'usuarios'));
-    for(const d of snap.docs) {
-      const uid = d.id;
-      for(const mat of Object.keys(MATS)) {
-        const rs = await getDocs(collection(db,'usuarios',uid,'progreso',mat,'respuestas'));
-        await Promise.all(rs.docs.map(x=>deleteDoc(x.ref)));
-      }
-      try { await deleteDoc(doc(db,'usuarios',uid,'sesion','actual')); } catch(e){}
-    }
-    alert('Todo el progreso fue reseteado.');
-    await cargarAdmin();
-  } catch(e) { alert('Error: '+e.message); }
-  sp(false);
-};
-
-window.exportarCSV = () => {
-  const rows = [['Nombre','Email','Respondidas','Correctas','%','Tiempo',
-    'Mat %','Lec %','Soc %','Nat %']];
-  adminData.forEach(a => {
-    const pct = a.totalResp ? Math.round(a.totalCor/a.totalResp*100) : 0;
-    const getMp = k => { const d=a.matData[k]||{r:0,c:0}; return d.r?Math.round(d.c/d.r*100):0; };
-    rows.push([a.nombre, a.email, a.totalResp, a.totalCor, pct+'%',
-      fmt(a.totalTiempo), getMp('matematicas')+'%', getMp('lectura')+'%',
-      getMp('sociales')+'%', getMp('naturales')+'%']);
-  });
-  const csv = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
-  const a = document.createElement('a');
-  a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
-  a.download = 'saber11_progreso_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-};
+.op:hover:not(.bloq) { border-color: #2563eb; background: #eff6ff; }
+.op.correcta  { border-color: #059669; background: #f0fdf4; color: #065f46; font-weight: 700; }
+.op.incorrecta{ border-color: #dc2626; background: #fef2f2; color: #991b1b; }
+.op.bloq      { cursor: default; }
+@media(max-width:440px){ .ops { grid-template-columns: 1fr; } }
