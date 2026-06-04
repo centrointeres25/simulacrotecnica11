@@ -111,19 +111,44 @@
 
     <!-- Zona principal -->
     <div class="quiz-main">
+
+      <!-- Header: materia + progreso + terminar -->
       <div class="quiz-header">
-        <button class="btn-sb-show" id="btn-sb-show" onclick="toggleSidebar()" style="display:none" title="Mostrar panel">☰</button>
-        <span class="mat-tag" id="qh-mat">Matemáticas</span>
-        <div class="pq">
-          <div class="pt" id="qh-prog">Pregunta 1 de 25</div>
-          <div class="pb"><div class="pf" id="qh-barra" style="width:0%"></div></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
-          <div class="timers" id="timers-wrap">
-            <div class="t-preg" id="t-preg">⏱ 0:00</div>
-            <div class="t-total" id="t-total">Total: 0:00</div>
+        <div class="qh-left">
+          <button class="btn-sb-show" id="btn-sb-show" onclick="toggleSidebar()" style="display:none" title="Mostrar panel">☰</button>
+          <span class="mat-tag" id="qh-mat">Matemáticas</span>
+          <div class="pq">
+            <div class="pt" id="qh-prog">Pregunta 1 de 25</div>
+            <div class="pb"><div class="pf" id="qh-barra" style="width:0%"></div></div>
           </div>
-          <button class="btn-timer-toggle" id="timer-quiz-btn" onclick="toggleTimerQuiz()" title="Mostrar/ocultar cronómetro">👁</button>
+        </div>
+        <div class="qh-right">
+          <!-- Cronómetros en fila -->
+          <div class="timers-fila" id="timers-wrap">
+            <!-- Temporizador: cuenta regresiva ajustable -->
+            <div class="timer-bloque" id="bloque-temp" style="display:none">
+              <div class="timer-label">⏳ Temporizador</div>
+              <div class="t-preg" id="t-preg">0:00</div>
+              <div class="timer-ctrl">
+                <button class="tc-btn" onclick="ajustarTimer(-10)">-10s</button>
+                <button class="tc-btn" onclick="ajustarTimer(10)">+10s</button>
+                <button class="tc-btn tc-reset" onclick="resetTimerPreg()">↺</button>
+              </div>
+            </div>
+            <!-- Cronómetro normal -->
+            <div class="timer-bloque" id="bloque-crono" style="display:none">
+              <div class="timer-label">⏱ Cronómetro</div>
+              <div class="t-crono" id="t-crono">0:00</div>
+            </div>
+            <!-- Total siempre visible si alguno está on -->
+            <div class="timer-bloque-total" id="bloque-total">
+              <div class="timer-label">Total</div>
+              <div class="t-total" id="t-total">0:00</div>
+            </div>
+          </div>
+          <button class="btn-timer-toggle" id="timer-quiz-btn" onclick="toggleTimerQuiz()" title="Ocultar/mostrar cronómetro">👁</button>
+          <!-- Botón Terminar en esquina superior derecha -->
+          <button class="bn ter-top" id="btn-ter" onclick="terminarSimulacro()" style="display:none">✅ Terminar</button>
         </div>
       </div>
 
@@ -137,7 +162,6 @@
       <div class="quiz-nav-btns">
         <button class="bn ant" id="btn-ant" onclick="anteriorPregunta()">← Anterior</button>
         <button class="bn sig" id="btn-sig" onclick="siguientePregunta()">Siguiente →</button>
-        <button class="bn ter" id="btn-ter" onclick="terminarSimulacro()" style="display:none">✅ Terminar y ver resultados</button>
       </div>
     </div>
   </div>
